@@ -12,27 +12,31 @@ class _UserPageState extends State<UserPage> {
   final TextEditingController _amtsavedcontroller = TextEditingController();
   final TextEditingController _totalamtcontroller = TextEditingController();
   // List that holds user's saving goals
-  final List<Widget> _goals = [];
+  final List<Map> _goals = [];
 
-  // Adds goal to list of saving goals
-  void _addSavingsGoal() {
+  // Adds or edits goal to list of saving goals
+  void _addSavingsGoal({int? index}) {
     String name = _namecontroller.text;
     String amtsaved = _amtsavedcontroller.text;
     String totalamt = _totalamtcontroller.text;
     setState(() {
-      _goals.add(
-        ListTile(
-          key: ValueKey(_goals.length + 1),
-          title: Text(name),
-          subtitle: Text('\$$amtsaved of \$$totalamt saved!'),
-          tileColor: const Color.fromARGB(255, 253, 241, 255),
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(10),
-            side: BorderSide(color: Colors.black.withOpacity(0.75)),
-          ),
-        ),
-      );
+      if (index != null) {
+        // To edit goals already in the list
+        _goals[index] = ({
+          'name': name,
+          'amtsaved': amtsaved,
+          'totalamt': totalamt,
+        });
+      } else {
+        // To add goals to the list
+        _goals.add({'name': name, 'amtsaved': amtsaved, 'totalamt': totalamt});
+      }
     });
+
+    // clears the text fields
+    _namecontroller.clear();
+    _amtsavedcontroller.clear();
+    _totalamtcontroller.clear();
   }
 
   void _updateMyItems(int oldIndex, int newIndex) {
@@ -91,16 +95,60 @@ class _UserPageState extends State<UserPage> {
             ),
             Expanded(
               // List of saving goals that can be reordered by the user
-              child: ReorderableListView(
+              child: ReorderableListView.builder(
+                buildDefaultDragHandles: false,
+                itemCount: _goals.length,
+                itemBuilder: (context, index) {
+                  return GestureDetector(
+                    key: ValueKey(_goals[index]),
+                    onTap: () {
+                      // On tap, users can edit a goal
+                      _namecontroller.text = _goals[index]['name'];
+                      _amtsavedcontroller.text = _goals[index]['amtsaved'];
+                      _totalamtcontroller.text = _goals[index]['totalamt'];
+                      showModalBottomSheet(
+                        context: context,
+                        isScrollControlled: true,
+                        builder: (BuildContext context) {
+                          return buildFullScreenSheet(
+                            _namecontroller,
+                            _amtsavedcontroller,
+                            _totalamtcontroller,
+                            () => _addSavingsGoal(index: index),
+                          );
+                        },
+                      );
+                    },
+                    child: Container(
+                      margin: EdgeInsets.only(left: 20, right: 20, bottom: 10),
+                      child: ListTile(
+                        title: Text(_goals[index]['name']),
+                        subtitle: Text(
+                          '\$${_goals[index]['amtsaved']} saved of \$${_goals[index]['totalamt']}',
+                        ),
+                        tileColor: const Color.fromARGB(255, 253, 241, 255),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(10),
+                          side: BorderSide(
+                            color: Colors.black.withOpacity(0.75),
+                          ),
+                        ),
+                        trailing: ReorderableDragStartListener(
+                          index: index,
+                          child: Icon(Icons.drag_handle),
+                        ),
+                      ),
+                    ),
+                  );
+                },
                 onReorder: (oldIndex, newIndex) {
                   setState(() {
                     _updateMyItems(oldIndex, newIndex);
                   });
                 },
-                children: _goals,
               ),
             ),
-            // Opens bottom sheet
+            // Opens bottom sheet when presssed by user
             TextButton(
               onPressed: () {
                 showModalBottomSheet(
