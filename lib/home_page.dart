@@ -19,6 +19,7 @@ class _HomePageState extends State<HomePage> {
   final TextEditingController expenseDescriptionController = TextEditingController();
   final TextEditingController expenseAmountController = TextEditingController();
   final TextEditingController incomeAmountController = TextEditingController();
+  final TextEditingController incomeSourceController = TextEditingController();
   
   // Monthly expenses
   final List<Transaction> monthlyExpenses = [
@@ -41,6 +42,7 @@ class _HomePageState extends State<HomePage> {
     expenseDescriptionController.dispose();
     expenseAmountController.dispose();
     incomeAmountController.dispose();
+    incomeSourceController.dispose();
     super.dispose();
   }
 
@@ -139,30 +141,47 @@ class _HomePageState extends State<HomePage> {
                   children: [
                     Padding(
                       padding: const EdgeInsets.all(16.0),
-                      child: Row(
+                      child: Column(
+                        mainAxisSize: MainAxisSize.min,
                         children: [
-                          Expanded(
-                            child: TextField(
-                              controller: incomeAmountController,
-                              decoration: InputDecoration(
-                                labelText: 'Add Income',
-                                border: const OutlineInputBorder(),
-                                labelStyle: TextStyle(color: secondaryTextColor),
-                              ),
-                              keyboardType: TextInputType.number,
-                              style: TextStyle(color: textColor),
+                          TextField(
+                            decoration: InputDecoration(
+                              labelText: 'Source (e.g. Paycheck, Freelance)',
+                              border: const OutlineInputBorder(),
+                              labelStyle: TextStyle(color: secondaryTextColor),
                             ),
+                            style: TextStyle(color: textColor),
                           ),
-                          const SizedBox(width: 10),
-                          ElevatedButton(
-                            onPressed: () {
-                              // Add income functionality will go here
-                            },
-                            style: ElevatedButton.styleFrom(
-                              backgroundColor: Colors.purple,
-                              foregroundColor: Colors.white,
-                            ),
-                            child: const Text('Add'),
+                          const SizedBox(height: 10),
+                          Row(
+                            children: [
+                              Expanded(
+                                child: TextField(
+                                  controller: incomeAmountController,
+                                  decoration: InputDecoration(
+                                    labelText: 'Amount',
+                                    border: const OutlineInputBorder(),
+                                    labelStyle: TextStyle(color: secondaryTextColor),
+                                  ),
+                                  keyboardType: TextInputType.number,
+                                  style: TextStyle(color: textColor),
+                                ),
+                              ),
+                              const SizedBox(width: 10),
+                              ElevatedButton(
+                                onPressed: () {
+                                  // Add income functionality will go here
+                                },
+                                style: ElevatedButton.styleFrom(
+                                  backgroundColor: Colors.purple,
+                                  foregroundColor: Colors.white,
+                                  shape: RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.circular(25),
+                                  ),
+                                ),
+                                child: const Text('Add'),
+                              ),
+                            ],
                           ),
                         ],
                       ),
