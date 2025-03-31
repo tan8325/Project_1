@@ -11,6 +11,8 @@ class _UserPageState extends State<UserPage> {
   final TextEditingController _namecontroller = TextEditingController();
   final TextEditingController _amtsavedcontroller = TextEditingController();
   final TextEditingController _totalamtcontroller = TextEditingController();
+  final TextEditingController _addamtcontroller = TextEditingController();
+
   // List that holds user's saving goals
   final List<Map> _goals = [];
 
@@ -20,23 +22,41 @@ class _UserPageState extends State<UserPage> {
     String amtsaved = _amtsavedcontroller.text;
     String totalamt = _totalamtcontroller.text;
     setState(() {
-      if (index != null) {
-        // To edit goals already in the list
-        _goals[index] = ({
-          'name': name,
-          'amtsaved': amtsaved,
-          'totalamt': totalamt,
-        });
-      } else {
-        // To add goals to the list
-        _goals.add({'name': name, 'amtsaved': amtsaved, 'totalamt': totalamt});
-      }
+      // To add goals to the list
+      _goals.add({'name': name, 'amtsaved': amtsaved, 'totalamt': totalamt});
     });
 
     // clears the text fields
     _namecontroller.clear();
     _amtsavedcontroller.clear();
     _totalamtcontroller.clear();
+  }
+
+  // Adds amount to saved amount
+  void _addAmount({int? index}) {
+    String name = _namecontroller.text;
+    String amtsaved = _amtsavedcontroller.text;
+    String totalamt = _totalamtcontroller.text;
+    String addamt = _addamtcontroller.text;
+
+    // Perform addition
+    int saved = int.parse(amtsaved);
+    int added = int.parse(addamt);
+    int sumamt = saved + added;
+    String result = sumamt.toString();
+    setState(() {
+      if (index != null) {
+        // To update goal
+        _goals[index] = ({
+          'name': name,
+          'amtsaved': result,
+          'totalamt': totalamt,
+        });
+      } else {
+        _goals.add({'name': name, 'amtsaved': result, 'totalamt': totalamt});
+      }
+    });
+    _addamtcontroller.clear();
   }
 
   void _updateMyItems(int oldIndex, int newIndex) {
@@ -55,6 +75,10 @@ class _UserPageState extends State<UserPage> {
         _goals.removeAt(index);
       }
     });
+
+    _namecontroller.clear();
+    _amtsavedcontroller.clear();
+    _totalamtcontroller.clear();
   }
 
   @override
@@ -123,11 +147,13 @@ class _UserPageState extends State<UserPage> {
                         context: context,
                         isScrollControlled: true,
                         builder: (BuildContext context) {
-                          return buildFullScreenSheet(
+                          return buildFullScreenEditSheet(
                             _namecontroller,
                             _amtsavedcontroller,
                             _totalamtcontroller,
+                            _addamtcontroller,
                             () => _addSavingsGoal(index: index),
+                            () => _addAmount(index: index),
                             () => _deleteSavingsGoal(index: index),
                           );
                         },
@@ -291,11 +317,10 @@ Widget buildFullScreenSheet(
                     ),
                   ),
                   icon: Icon(Icons.check),
-                  label: Text("Add New Savings Goal"),
+                  label: Text("Add New Saving Goal"),
                 ),
                 OutlinedButton.icon(
                   onPressed: () {
-                    deleteSavingsGoal();
                     Navigator.pop(context);
                   },
                   style: OutlinedButton.styleFrom(
@@ -307,6 +332,157 @@ Widget buildFullScreenSheet(
                   ),
                   icon: Icon(Icons.cancel_outlined),
                   label: Text("Cancel"),
+                ),
+              ],
+            ),
+          ],
+        ),
+      );
+    },
+  );
+}
+
+// Flutter Bottom Sheet to edit saving goal
+Widget buildFullScreenEditSheet(
+  TextEditingController nameController,
+  TextEditingController amtsavedController,
+  TextEditingController totalamtController,
+  TextEditingController addamtController,
+  Function addSavingsGoal,
+  Function addAmount,
+  Function deleteSavingsGoal,
+) {
+  return DraggableScrollableSheet(
+    initialChildSize: 1, // sheet takes up available screen height
+    maxChildSize: 1, // maximum sheet height
+    minChildSize: 0.75, // minimum sheet size, collapses at 75% screen height
+    builder: (context, scrollController) {
+      return Container(
+        decoration: BoxDecoration(
+          color: const Color.fromARGB(255, 251, 245, 252),
+          borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+        ),
+        child: ListView(
+          controller: scrollController,
+          children: [
+            Padding(
+              padding: EdgeInsets.all(25),
+              child: Text(
+                "Edit Savings Goal",
+                style: TextStyle(fontSize: 28, fontWeight: FontWeight.bold),
+                textAlign: TextAlign.center,
+              ),
+            ),
+            Padding(
+              padding: EdgeInsets.only(left: 20, right: 20, bottom: 20),
+              child: TextField(
+                controller: nameController,
+                decoration: InputDecoration(
+                  hintText: 'Ex: Vacation, Car, Expenses',
+                  labelText: 'Goal Name',
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(15),
+                  ),
+                  prefixIcon: Icon(
+                    Icons.auto_awesome_rounded,
+                    color: Colors.yellow,
+                  ),
+                ),
+              ),
+            ),
+            Padding(
+              padding: EdgeInsets.only(left: 20, right: 20, bottom: 20),
+              child: TextField(
+                keyboardType: TextInputType.number,
+                controller: amtsavedController,
+                decoration: InputDecoration(
+                  labelText: 'Amount saved',
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(15),
+                  ),
+                  prefixIcon: Icon(Icons.savings_rounded, color: Colors.pink),
+                ),
+              ),
+            ),
+            Padding(
+              padding: EdgeInsets.only(left: 20, right: 20, bottom: 20),
+              child: TextField(
+                controller: totalamtController,
+                decoration: InputDecoration(
+                  labelText: 'Total Amount Needed',
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(15),
+                  ),
+                  prefixIcon: Icon(
+                    Icons.attach_money_rounded,
+                    color: Colors.green,
+                  ),
+                ),
+              ),
+            ),
+            Padding(
+              padding: EdgeInsets.only(left: 20, right: 20, bottom: 20),
+              child: TextField(
+                controller: addamtController,
+                decoration: InputDecoration(
+                  labelText: 'Add Amount',
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(15),
+                  ),
+                  prefixIcon: Icon(Icons.add_circle, color: Colors.blue),
+                ),
+              ),
+            ),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+              children: [
+                // Save Goal Button
+                ElevatedButton.icon(
+                  onPressed: () {
+                    addAmount();
+                    Navigator.pop(context);
+                  },
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Colors.purple,
+                    foregroundColor: Colors.white,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                  ),
+                  icon: Icon(Icons.check),
+                  label: Text("Save Goal"),
+                ),
+
+                // Cancel Button
+                OutlinedButton.icon(
+                  onPressed: () {
+                    Navigator.pop(context);
+                  },
+                  style: OutlinedButton.styleFrom(
+                    foregroundColor: Colors.red,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                    side: BorderSide(color: Colors.red),
+                  ),
+                  icon: Icon(Icons.cancel_outlined),
+                  label: Text("Cancel"),
+                ),
+
+                // Delete Goal Button
+                ElevatedButton.icon(
+                  onPressed: () {
+                    deleteSavingsGoal();
+                    Navigator.pop(context);
+                  },
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Colors.red,
+                    foregroundColor: Colors.white,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                  ),
+                  label: Text("Delete Goal"),
                 ),
               ],
             ),
