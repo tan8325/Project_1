@@ -124,7 +124,7 @@ class _HomePageState extends State<HomePage> {
   @override
   Widget build(BuildContext context) {
     double remaining = income - spent;
-    double progressValue = spent / income > 1 ? 1 : spent / income; // Cap at 1 to prevent overflow
+    double progressValue = income <= 0 ? 0 : (spent / income > 1 ? 1 : spent / income);
     final isDarkMode = Theme.of(context).brightness == Brightness.dark;
     final Color cardColor = isDarkMode ? Colors.grey[800]! : Colors.purple.shade50;
     final Color textColor = isDarkMode ? Colors.white : Colors.black;
