@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:project1/services/auth_service.dart';
+import 'package:project1/welcome_screen.dart';
 
 void main() {
   runApp(const MyApp());
@@ -37,6 +39,19 @@ class SettingsPage extends StatelessWidget {
           _buildTile(context, Icons.remove_red_eye, 'Appearance', AppearancePage(toggleTheme: toggleTheme)),
           _buildTile(context, Icons.lock, 'Privacy', const PrivacyPage()),
           _buildTile(context, Icons.info_outline, 'About', const AboutPage()),
+          ListTile(
+            leading: const Icon(Icons.exit_to_app, color: Colors.red),
+            title: const Text('Logout', style: TextStyle(color: Colors.red)),
+            onTap: () async {
+              await AuthService().logout();
+              if (context.mounted) {
+                Navigator.of(context).pushAndRemoveUntil(
+                  MaterialPageRoute(builder: (context) => const WelcomeScreen()),
+                  (route) => false,
+                );
+              }
+            },
+          ),
         ],
       ),
     );

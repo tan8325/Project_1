@@ -1,13 +1,25 @@
 import 'package:flutter/material.dart';
+import 'package:project1/services/auth_service.dart';
+import 'welcome_screen.dart';
 import 'home_page.dart';
 import 'user_page.dart';
 import 'graph_page.dart';
 import 'settings_page.dart';
 
-void main() => runApp(const MyApp());
+void main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+  
+  // Check if user is already logged in
+  final authService = AuthService();
+  final currentUser = await authService.getCurrentUser();
+  
+  runApp(MyApp(isLoggedIn: currentUser != null));
+}
 
 class MyApp extends StatelessWidget {
-  const MyApp({super.key});
+  final bool isLoggedIn;
+  
+  const MyApp({super.key, required this.isLoggedIn});
 
   @override
   Widget build(BuildContext context) {
@@ -18,7 +30,7 @@ class MyApp extends StatelessWidget {
         colorScheme: ColorScheme.fromSeed(seedColor: Colors.deepPurple),
         useMaterial3: true,
       ),
-      home: const HomeScreen(),
+      home: isLoggedIn ? const HomeScreen() : const WelcomeScreen(),
     );
   }
 }
