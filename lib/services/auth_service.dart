@@ -9,39 +9,21 @@ class User {
   final String email;
   final String password;
 
-  User({
-    this.id,
-    required this.name,
-    required this.email,
-    required this.password,
-  });
+  User({this.id, required this.name, required this.email, required this.password});
 
-  Map<String, dynamic> toMap() {
-    return {
-      'id': id,
-      'name': name,
-      'email': email,
-      'password': password,
-    };
-  }
+  Map<String, dynamic> toMap() => {'id': id, 'name': name, 'email': email, 'password': password};
 
-  static User fromMap(Map<String, dynamic> map) {
-    return User(
-      id: map['id'],
-      name: map['name'],
-      email: map['email'],
-      password: map['password'],
-    );
-  }
+  static User fromMap(Map<String, dynamic> map) => User(
+    id: map['id'], name: map['name'], email: map['email'], password: map['password']);
 }
 
 class AuthService {
   static final AuthService _instance = AuthService._internal();
   static Database? _database;
-  
-  static const String demoEmail = "demo@example.com";
-  static const String demoPassword = "password123";
-  static const String demoName = "Demo User";
+
+  static const demoEmail = "demo@example.com";
+  static const demoPassword = "password123";
+  static const demoName = "Demo User";
 
   factory AuthService() => _instance;
   AuthService._internal();
@@ -52,6 +34,7 @@ class AuthService {
   }
 
   Future<Database> _initDatabase() async {
+<<<<<<< HEAD
     String path = join(await getDatabasesPath(), 'finance_app.db');
     return await openDatabase(
       path,
@@ -79,6 +62,19 @@ class AuthService {
         ''');
       },
     );
+=======
+    final path = join(await getDatabasesPath(), 'finance_app.db');
+    return await openDatabase(path, version: 1, onCreate: (db, version) async {
+      await db.execute(''' 
+        CREATE TABLE users(
+          id INTEGER PRIMARY KEY AUTOINCREMENT,
+          name TEXT,
+          email TEXT UNIQUE,
+          password TEXT
+        )
+      ''');
+    });
+>>>>>>> 442d927510810c871f38e580ee790f410b5fc773
   }
 
   Future<int> createUser(User user) async {
@@ -88,6 +84,7 @@ class AuthService {
 
   Future<User?> getUser(String email, String password) async {
     if (email == demoEmail && password == demoPassword) {
+<<<<<<< HEAD
       // Check if demo user exists in database
       final db = await database;
       List<Map<String, dynamic>> maps = await db.query(
@@ -123,28 +120,23 @@ class AuthService {
     }
     
     // Regular user login - no demo data added
+=======
+      return User(id: 999, name: demoName, email: demoEmail, password: demoPassword);
+    }
+>>>>>>> 442d927510810c871f38e580ee790f410b5fc773
     final db = await database;
-    List<Map<String, dynamic>> maps = await db.query(
-      'users',
-      where: 'email = ? AND password = ?',
-      whereArgs: [email, password],
-    );
-
+    final maps = await db.query('users', where: 'email = ? AND password = ?', whereArgs: [email, password]);
     return maps.isNotEmpty ? User.fromMap(maps.first) : null;
   }
 
   Future<User?> getUserByEmail(String email) async {
     final db = await database;
-    List<Map<String, dynamic>> maps = await db.query(
-      'users',
-      where: 'email = ?',
-      whereArgs: [email],
-    );
-
+    final maps = await db.query('users', where: 'email = ?', whereArgs: [email]);
     return maps.isNotEmpty ? User.fromMap(maps.first) : null;
   }
 
   Future<void> saveCurrentUser(int userId) async {
+<<<<<<< HEAD
     SharedPreferences prefs = await SharedPreferences.getInstance();
     await prefs.setInt('current_user_id', userId);
   }
@@ -170,10 +162,44 @@ class AuthService {
       print('Error getting current user: $e');
       return null;
     }
+=======
+    final db = await database;
+    await db.execute('CREATE TABLE IF NOT EXISTS current_user(id INTEGER PRIMARY KEY, user_id INTEGER)');
+    await db.delete('current_user');
+    await db.insert('current_user', {'id': 1, 'user_id': userId});
+  }
+
+  Future<User?> getCurrentUser() async {
+    final db = await database;
+    final currentUserMaps = await db.query('current_user');
+    if (currentUserMaps.isEmpty) return null;
+
+    final userId = currentUserMaps.first['user_id'] as int;
+    final userMaps = await db.query('users', where: 'id = ?', whereArgs: [userId]);
+    return userMaps.isNotEmpty ? User.fromMap(userMaps.first) : null;
+>>>>>>> 442d927510810c871f38e580ee790f410b5fc773
   }
 
   Future<void> logout() async {
     SharedPreferences prefs = await SharedPreferences.getInstance();
     await prefs.remove('current_user_id');
   }
+<<<<<<< HEAD
+=======
+
+  Future<int> updateUser(User user) async {
+    final db = await database;
+    return await db.update('users', user.toMap(), where: 'id = ?', whereArgs: [user.id]);
+  }
+
+  Future<int> updateUserEmail(int userId, String newEmail) async {
+    final db = await database;
+    return await db.update('users', {'email': newEmail}, where: 'id = ?', whereArgs: [userId]);
+  }
+
+  Future<int> updateUserPassword(int userId, String newPassword) async {
+    final db = await database;
+    return await db.update('users', {'password': newPassword}, where: 'id = ?', whereArgs: [userId]);
+  }
+>>>>>>> 442d927510810c871f38e580ee790f410b5fc773
 }
