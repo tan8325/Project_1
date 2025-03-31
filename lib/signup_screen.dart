@@ -3,7 +3,6 @@ import 'package:project1/services/auth_service.dart';
 import 'main.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
-
 class SignupScreen extends StatefulWidget {
   const SignupScreen({super.key});
 
@@ -20,6 +19,20 @@ class _SignupScreenState extends State<SignupScreen> {
   final _authService = AuthService();
   bool _isLoading = false;
   String _errorMessage = '';
+  bool isDarkMode = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadDarkModePreference();
+  }
+
+  Future<void> _loadDarkModePreference() async {
+    final prefs = await SharedPreferences.getInstance();
+    setState(() {
+      isDarkMode = prefs.getBool('isDarkMode') ?? false;
+    });
+  }
 
   @override
   void dispose() {
@@ -58,14 +71,18 @@ class _SignupScreenState extends State<SignupScreen> {
         
         final userId = await _authService.createUser(newUser);
         
-        // Make sure we're saving the new user ID properly
         await _authService.saveCurrentUser(userId);
         
+        final prefs = await SharedPreferences.getInstance();
+        prefs.setBool('isDarkMode', isDarkMode);
+
         if (!mounted) return;
         
         Navigator.pushReplacement(
           context, 
-          MaterialPageRoute(builder: (context) => const HomeScreen())
+          MaterialPageRoute(
+            builder: (context) => HomeScreen(isDarkMode: isDarkMode),
+          ),
         );
       } catch (e) {
         setState(() {
@@ -192,4 +209,4 @@ class _SignupScreenState extends State<SignupScreen> {
       ),
     );
   }
-} 
+}

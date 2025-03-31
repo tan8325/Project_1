@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:project1/services/auth_service.dart';
 import 'welcome_screen.dart';
 import 'home_page.dart';
@@ -12,31 +13,34 @@ void main() async {
   // Check if user is already logged in
   final authService = AuthService();
   final currentUser = await authService.getCurrentUser();
-  
-  runApp(MyApp(isLoggedIn: currentUser != null));
+
+  final prefs = await SharedPreferences.getInstance();
+  final isDarkMode = prefs.getBool('isDarkMode') ?? false; 
+
+  runApp(MyApp(isLoggedIn: currentUser != null, isDarkMode: isDarkMode));
 }
 
 class MyApp extends StatelessWidget {
   final bool isLoggedIn;
+  final bool isDarkMode;
   
-  const MyApp({super.key, required this.isLoggedIn});
+  const MyApp({super.key, required this.isLoggedIn, required this.isDarkMode});
 
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
       debugShowCheckedModeBanner: false,
       title: 'Personal Finance Manager',
-      theme: ThemeData(
-        colorScheme: ColorScheme.fromSeed(seedColor: Colors.deepPurple),
-        useMaterial3: true,
-      ),
-      home: isLoggedIn ? const HomeScreen() : const WelcomeScreen(),
+      theme: isDarkMode ? ThemeData.dark() : ThemeData.light(),
+      home: isLoggedIn ? HomeScreen(isDarkMode: isDarkMode) : const WelcomeScreen(),
     );
   }
 }
 
 class HomeScreen extends StatefulWidget {
-  const HomeScreen({super.key});
+  final bool isDarkMode;
+
+  const HomeScreen({super.key, required this.isDarkMode});
 
   @override
   _HomeScreenState createState() => _HomeScreenState();
@@ -44,12 +48,23 @@ class HomeScreen extends StatefulWidget {
 
 class _HomeScreenState extends State<HomeScreen> {
   int _selectedIndex = 0;
-  bool isDarkMode = false;
 
-  void toggleTheme() {
+  late bool isDarkMode;
+
+  @override
+  void initState() {
+    super.initState();
+    isDarkMode = widget.isDarkMode;
+  }
+
+  void toggleTheme() async {
     setState(() {
       isDarkMode = !isDarkMode;
     });
+
+    // Save theme preference to SharedPreferences
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setBool('isDarkMode', isDarkMode);
   }
 
   @override

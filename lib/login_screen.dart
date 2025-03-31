@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:project1/services/auth_service.dart';
 import 'main.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
@@ -16,6 +17,20 @@ class _LoginScreenState extends State<LoginScreen> {
   final _authService = AuthService();
   bool _isLoading = false;
   String _errorMessage = '';
+  bool isDarkMode = false; 
+
+  @override
+  void initState() {
+    super.initState();
+    _loadDarkModePreference();
+  }
+
+  Future<void> _loadDarkModePreference() async {
+    final prefs = await SharedPreferences.getInstance();
+    setState(() {
+      isDarkMode = prefs.getBool('isDarkMode') ?? false;
+    });
+  }
 
   @override
   void dispose() {
@@ -37,21 +52,26 @@ class _LoginScreenState extends State<LoginScreen> {
         _isLoading = true;
         _errorMessage = '';
       });
-      
+
       try {
         final user = await _authService.getUser(
           _emailController.text.trim(),
           _passwordController.text,
         );
-        
+
         if (user != null) {
           await _authService.saveCurrentUser(user.id!);
-          
+
+          final prefs = await SharedPreferences.getInstance();
+          prefs.setBool('isDarkMode', isDarkMode);
+
           if (!mounted) return;
-          
+
           Navigator.pushReplacement(
-            context, 
-            MaterialPageRoute(builder: (context) => const HomeScreen())
+            context,
+            MaterialPageRoute(
+              builder: (context) => HomeScreen(isDarkMode: isDarkMode),
+            ),
           );
         } else {
           setState(() {
@@ -154,4 +174,4 @@ class _LoginScreenState extends State<LoginScreen> {
       ),
     );
   }
-} 
+}
