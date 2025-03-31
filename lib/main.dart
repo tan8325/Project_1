@@ -57,7 +57,7 @@ class _HomeScreenState extends State<HomeScreen> {
     final List<Widget> _pages = [
       const HomePage(),
       const UserPage(),
-      const GraphPage(),
+      const GraphPage(key: PageStorageKey('graphPage')),
       SettingsPage(toggleTheme: toggleTheme),
     ];
 
@@ -77,9 +77,15 @@ class _HomeScreenState extends State<HomeScreen> {
           unselectedItemColor: Colors.grey,
           showSelectedLabels: false,
           showUnselectedLabels: false,
-          onTap: (index) => setState(() => _selectedIndex = index),
+          onTap: _onItemTapped,
         ),
       ),
     );
+  }
+
+  void _onItemTapped(int index) {
+    setState(() {
+      _selectedIndex = index;
+    });
   }
 }
