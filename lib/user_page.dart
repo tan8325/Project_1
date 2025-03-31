@@ -66,7 +66,7 @@ class _UserPageState extends State<UserPage> {
           children: [
             // Circular Progress Indicator
             SizedBox(
-              height: 250,
+              height: 225,
               child: Stack(
                 alignment: Alignment.center,
                 children: [
@@ -79,29 +79,28 @@ class _UserPageState extends State<UserPage> {
                               ? (double.tryParse(_goals[0]['amtsaved']) ?? 0) /
                                   (double.tryParse(_goals[0]['totalamt']) ?? 1)
                               : 0,
-                      valueColor: AlwaysStoppedAnimation<Color>(Colors.purple),
-                      backgroundColor: const Color.fromARGB(255, 214, 213, 213),
+                      backgroundColor: Colors.purple.shade100,
+                      valueColor: AlwaysStoppedAnimation<Color>(
+                        Colors.purple.shade700,
+                      ),
                       strokeWidth: 2,
                     ),
                   ),
                   Container(
-                    alignment: Alignment.topCenter,
-                    width: 50,
-                    height: 25,
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 12,
+                      vertical: 6,
+                    ),
                     decoration: BoxDecoration(
-                      color: Colors.white,
-                      borderRadius: BorderRadius.circular(5),
-                      boxShadow: [
-                        BoxShadow(
-                          color: Colors.grey.withOpacity(0.5),
-                          spreadRadius: 1,
-                          blurRadius: 1,
-                          offset: Offset(0, 0),
-                        ),
-                      ],
+                      color: Colors.grey.shade200,
+                      borderRadius: BorderRadius.circular(20),
                     ),
                     child: Text(
                       _goals.isNotEmpty ? '\$${_goals[0]['amtsaved']}' : '\$0',
+                      style: TextStyle(
+                        fontWeight: FontWeight.bold,
+                        color: Colors.black,
+                      ),
                     ),
                   ),
                 ],
@@ -145,7 +144,7 @@ class _UserPageState extends State<UserPage> {
                         shape: RoundedRectangleBorder(
                           borderRadius: BorderRadius.circular(10),
                           side: BorderSide(
-                            color: Colors.black.withOpacity(0.75),
+                            color: Colors.black.withOpacity(0.10),
                           ),
                         ),
                         trailing: ReorderableDragStartListener(
@@ -183,8 +182,14 @@ class _UserPageState extends State<UserPage> {
               style: ElevatedButton.styleFrom(
                 backgroundColor: Colors.purple,
                 foregroundColor: Colors.white,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(10),
+                ),
               ),
-              child: Text('Add New Savings Goal'),
+              child: Text(
+                'Add New Savings Goal',
+                style: TextStyle(fontWeight: FontWeight.bold),
+              ),
             ),
             SizedBox(height: 15),
           ],
@@ -208,32 +213,40 @@ Widget buildFullScreenSheet(
     minChildSize: 0.75, // minimum sheet size, collapses at 75% screen height
     builder: (context, scrollController) {
       return Container(
-        color: const Color.fromARGB(255, 251, 245, 252),
+        decoration: BoxDecoration(
+          color: const Color.fromARGB(255, 251, 245, 252),
+          borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+        ),
         child: ListView(
           controller: scrollController,
           children: [
             Padding(
-              padding: EdgeInsets.all(20),
+              padding: EdgeInsets.all(25),
               child: Text(
                 "Add a New Savings Goal",
-                style: TextStyle(fontSize: 28),
+                style: TextStyle(fontSize: 28, fontWeight: FontWeight.bold),
+                textAlign: TextAlign.center,
               ),
             ),
             Padding(
-              padding: EdgeInsets.all(15),
+              padding: EdgeInsets.only(left: 20, right: 20, bottom: 20),
               child: TextField(
                 controller: nameController,
                 decoration: InputDecoration(
                   hintText: 'Ex: Vacation, Car, Expenses',
-                  labelText: 'Enter your goal name',
+                  labelText: 'Goal Name',
                   border: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(15),
+                  ),
+                  prefixIcon: Icon(
+                    Icons.auto_awesome_rounded,
+                    color: Colors.yellow,
                   ),
                 ),
               ),
             ),
             Padding(
-              padding: EdgeInsets.all(15),
+              padding: EdgeInsets.only(left: 20, right: 20, bottom: 20),
               child: TextField(
                 keyboardType: TextInputType.number,
                 controller: amtsavedController,
@@ -242,25 +255,30 @@ Widget buildFullScreenSheet(
                   border: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(15),
                   ),
+                  prefixIcon: Icon(Icons.savings_rounded, color: Colors.pink),
                 ),
               ),
             ),
             Padding(
-              padding: EdgeInsets.all(15),
+              padding: EdgeInsets.only(left: 20, right: 20, bottom: 20),
               child: TextField(
                 controller: totalamtController,
                 decoration: InputDecoration(
-                  labelText: 'Total amount needed to save',
+                  labelText: 'Total Amount Needed',
                   border: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(15),
+                  ),
+                  prefixIcon: Icon(
+                    Icons.attach_money_rounded,
+                    color: Colors.green,
                   ),
                 ),
               ),
             ),
             Row(
-              mainAxisAlignment: MainAxisAlignment.center,
+              mainAxisAlignment: MainAxisAlignment.spaceEvenly,
               children: [
-                ElevatedButton(
+                ElevatedButton.icon(
                   onPressed: () {
                     addSavingsGoal();
                     Navigator.pop(context);
@@ -268,16 +286,27 @@ Widget buildFullScreenSheet(
                   style: ElevatedButton.styleFrom(
                     backgroundColor: Colors.purple,
                     foregroundColor: Colors.white,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(10),
+                    ),
                   ),
-                  child: Text("Add New Savings Goal"),
+                  icon: Icon(Icons.check),
+                  label: Text("Add New Savings Goal"),
                 ),
-                IconButton(
+                OutlinedButton.icon(
                   onPressed: () {
                     deleteSavingsGoal();
                     Navigator.pop(context);
                   },
-                  color: Colors.red,
+                  style: OutlinedButton.styleFrom(
+                    foregroundColor: Colors.red,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                    side: BorderSide(color: Colors.red),
+                  ),
                   icon: Icon(Icons.cancel_outlined),
+                  label: Text("Cancel"),
                 ),
               ],
             ),
