@@ -193,12 +193,6 @@ class _GraphPageState extends State<GraphPage> with WidgetsBindingObserver {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    // Debug button to force refresh
-                    ElevatedButton(
-                      onPressed: () => _loadUserDataAndTransactions(forceRefresh: true),
-                      child: const Text("Force Refresh Data"),
-                    ),
-                    
                     // Area Chart Card
                     Card(
                       color: cardColor,
