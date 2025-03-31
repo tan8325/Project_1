@@ -135,7 +135,7 @@ class _HomePageState extends State<HomePage> {
     
     return Scaffold(
       appBar: AppBar(
-        title: Text('Welcome $userName'),
+        title: Text('Welcome $userName!'),
         centerTitle: true,
         backgroundColor: Colors.transparent,
         elevation: 0,
