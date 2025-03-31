@@ -182,11 +182,11 @@ class _HomePageState extends State<HomePage> {
                         Text('Left', style: TextStyle(color: secondaryTextColor)),
                         const SizedBox(height: 5),
                         Text(
-                          "\$${income.toStringAsFixed(2)} of \$${spent.toStringAsFixed(2)} Spent",
+                          "Budget: \$${income.toInt()} Spent: \$${spent.toInt()}",
                           textAlign: TextAlign.center,
                           style: TextStyle(
                             fontWeight: FontWeight.w500,
-                            fontSize: 10, // Small font to fit the space
+                            fontSize: 9, // Smaller font size to fit better
                             color: textColor,
                           ),
                         ),
