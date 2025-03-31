@@ -2,15 +2,13 @@ import 'package:flutter/material.dart';
 import 'package:project1/services/auth_service.dart';
 import 'package:project1/welcome_screen.dart';
 
-void main() {
-  runApp(const MyApp());
-}
+void main() => runApp(const MyApp());
 
 class MyApp extends StatefulWidget {
   const MyApp({super.key});
 
   @override
-  State<MyApp> createState() => _MyAppState();
+  _MyAppState createState() => _MyAppState();
 }
 
 class _MyAppState extends State<MyApp> {
@@ -39,30 +37,46 @@ class SettingsPage extends StatelessWidget {
           _buildTile(context, Icons.remove_red_eye, 'Appearance', AppearancePage(toggleTheme: toggleTheme)),
           _buildTile(context, Icons.lock, 'Privacy', const PrivacyPage()),
           _buildTile(context, Icons.info_outline, 'About', const AboutPage()),
-          ListTile(
-            leading: const Icon(Icons.exit_to_app, color: Colors.red),
-            title: const Text('Logout', style: TextStyle(color: Colors.red)),
+          _buildLogoutTile(
+            context,
+            Icons.exit_to_app,
+            'Logout',
             onTap: () async {
               await AuthService().logout();
-              if (context.mounted) {
-                Navigator.of(context).pushAndRemoveUntil(
-                  MaterialPageRoute(builder: (context) => const WelcomeScreen()),
-                  (route) => false,
-                );
-              }
+              Navigator.of(context).pushAndRemoveUntil(
+                MaterialPageRoute(builder: (_) => const WelcomeScreen()),
+                (route) => false,
+              );
             },
+            iconColor: Colors.red,
+            textColor: Colors.red,
           ),
         ],
       ),
     );
   }
 
-  ListTile _buildTile(BuildContext context, IconData icon, String title, Widget page) {
+  ListTile _buildTile(BuildContext context, IconData icon, String title, Widget? page, {VoidCallback? onTap, Color? iconColor, Color? textColor}) {
     return ListTile(
-      leading: Icon(icon),
-      title: Text(title),
+      leading: Icon(icon, color: iconColor),
+      title: Text(title, style: TextStyle(color: textColor)),
       trailing: const Icon(Icons.arrow_forward_ios),
-      onTap: () => Navigator.push(context, MaterialPageRoute(builder: (context) => page)),
+      onTap: onTap ?? () => Navigator.push(context, MaterialPageRoute(builder: (_) => page!)),
+    );
+  }
+
+  ListTile _buildLogoutTile(
+    BuildContext context,
+    IconData icon,
+    String title, {
+    required VoidCallback onTap,
+    Color? iconColor,
+    Color? textColor,
+  }) {
+    return ListTile(
+      leading: Icon(icon, color: iconColor),
+      title: Text(title, style: TextStyle(color: textColor)),
+      onTap: onTap,
     );
   }
 }
@@ -76,9 +90,9 @@ class AccountPage extends StatelessWidget {
       appBar: AppBar(title: const Text('Account')),
       body: Column(
         children: [
-          _buildTile(context, 'Edit Profile', const EditProfilePage()),
-          _buildTile(context, 'Change Email', const ChangeEmailPage()),
-          _buildTile(context, 'Update Password', const UpdatePasswordPage()),
+          _buildTile(context, 'Edit Profile', EditProfilePage()),
+          _buildTile(context, 'Change Email', ChangeEmailPage()),
+          _buildTile(context, 'Update Password', UpdatePasswordPage()),
         ],
       ),
     );
@@ -88,32 +102,101 @@ class AccountPage extends StatelessWidget {
     return ListTile(
       title: Text(title),
       trailing: const Icon(Icons.arrow_forward_ios),
-      onTap: () => Navigator.push(context, MaterialPageRoute(builder: (context) => page)),
+      onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => page)),
     );
   }
 }
 
 class EditProfilePage extends StatelessWidget {
-  const EditProfilePage({super.key});
+  final TextEditingController _nameController = TextEditingController();
+
   @override
   Widget build(BuildContext context) {
-    return _buildInputPage(context, 'Edit Profile', 'Name');
+    return Scaffold(
+      appBar: AppBar(title: const Text('Edit Profile')),
+      body: Padding(
+        padding: const EdgeInsets.all(16.0),
+        child: Column(
+          children: [
+            TextField(controller: _nameController, decoration: const InputDecoration(labelText: 'Name')),
+            const SizedBox(height: 20),
+            ElevatedButton(
+              onPressed: () async {
+                User? currentUser = await AuthService().getCurrentUser();
+                if (currentUser != null) {
+                  await AuthService().updateUser(User(id: currentUser.id, name: _nameController.text, email: currentUser.email, password: currentUser.password));
+                  ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Profile updated!')));
+                  _nameController.clear();
+                }
+              },
+              child: const Text('Save'),
+            ),
+          ],
+        ),
+      ),
+    );
   }
 }
 
 class ChangeEmailPage extends StatelessWidget {
-  const ChangeEmailPage({super.key});
+  final TextEditingController _emailController = TextEditingController();
+
   @override
   Widget build(BuildContext context) {
-    return _buildInputPage(context, 'Change Email', 'New Email');
+    return Scaffold(
+      appBar: AppBar(title: const Text('Change Email')),
+      body: Padding(
+        padding: const EdgeInsets.all(16.0),
+        child: Column(
+          children: [
+            TextField(controller: _emailController, decoration: const InputDecoration(labelText: 'New Email')),
+            const SizedBox(height: 20),
+            ElevatedButton(
+              onPressed: () async {
+                User? currentUser = await AuthService().getCurrentUser();
+                if (currentUser != null) {
+                  await AuthService().updateUserEmail(currentUser.id!, _emailController.text);
+                  ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Email updated!')));
+                  _emailController.clear();
+                }
+              },
+              child: const Text('Save'),
+            ),
+          ],
+        ),
+      ),
+    );
   }
 }
 
 class UpdatePasswordPage extends StatelessWidget {
-  const UpdatePasswordPage({super.key});
+  final TextEditingController _passwordController = TextEditingController();
+
   @override
   Widget build(BuildContext context) {
-    return _buildInputPage(context, 'Update Password', 'New Password', obscureText: true);
+    return Scaffold(
+      appBar: AppBar(title: const Text('Update Password')),
+      body: Padding(
+        padding: const EdgeInsets.all(16.0),
+        child: Column(
+          children: [
+            TextField(controller: _passwordController, obscureText: true, decoration: const InputDecoration(labelText: 'New Password')),
+            const SizedBox(height: 20),
+            ElevatedButton(
+              onPressed: () async {
+                User? currentUser = await AuthService().getCurrentUser();
+                if (currentUser != null) {
+                  await AuthService().updateUserPassword(currentUser.id!, _passwordController.text);
+                  ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Password updated!')));
+                  _passwordController.clear();
+                }
+              },
+              child: const Text('Save'),
+            ),
+          ],
+        ),
+      ),
+    );
   }
 }
 
@@ -127,10 +210,7 @@ class AppearancePage extends StatelessWidget {
       appBar: AppBar(title: const Text('Appearance')),
       body: ListTile(
         title: const Text('Dark Mode'),
-        trailing: Switch(
-          value: Theme.of(context).brightness == Brightness.dark,
-          onChanged: (value) => toggleTheme(),
-        ),
+        trailing: Switch(value: Theme.of(context).brightness == Brightness.dark, onChanged: (_) => toggleTheme()),
       ),
     );
   }
@@ -178,26 +258,4 @@ class AboutPage extends StatelessWidget {
       ),
     );
   }
-}
-
-Widget _buildInputPage(BuildContext context, String title, String hint, {bool obscureText = false}) {
-  final TextEditingController controller = TextEditingController();
-  return Scaffold(
-    appBar: AppBar(title: Text(title)),
-    body: Padding(
-      padding: const EdgeInsets.all(16.0),
-      child: Column(
-        children: [
-          TextField(controller: controller, obscureText: obscureText, decoration: InputDecoration(labelText: hint)),
-          const SizedBox(height: 20),
-          ElevatedButton(
-            onPressed: () {
-              ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('$title updated!')));
-            },
-            child: const Text('Save'),
-          ),
-        ],
-      ),
-    ),
-  );
 }
