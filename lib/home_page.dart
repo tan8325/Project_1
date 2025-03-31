@@ -1,4 +1,7 @@
 import 'package:flutter/material.dart';
+import 'package:project1/services/auth_service.dart';
+import 'package:project1/services/transaction_service.dart';
+import 'package:intl/intl.dart';
 
 class HomePage extends StatefulWidget {
   const HomePage({super.key});
@@ -8,10 +11,15 @@ class HomePage extends StatefulWidget {
 }
 
 class _HomePageState extends State<HomePage> {
-  // Static data for testing
-  final double budget = 2550.0;
-  final double spent = 738.0;
-  final double income = 3000.0;
+  final AuthService _authService = AuthService();
+  final TransactionService _transactionService = TransactionService();
+  
+  User? currentUser;
+  List<Transaction> monthlyExpenses = [];
+  List<Transaction> recentTransactions = [];
+  double income = 0.0;
+  double spent = 0.0;
+  double budget = 0.0;
   
   bool isIncomeExpanded = false;
   bool isExpensesExpanded = false;
@@ -21,21 +29,88 @@ class _HomePageState extends State<HomePage> {
   final TextEditingController incomeAmountController = TextEditingController();
   final TextEditingController incomeSourceController = TextEditingController();
   
-  // Monthly expenses
-  final List<Transaction> monthlyExpenses = [
-    Transaction('Auto & Transport', 'expense', 150.0),
-    Transaction('Auto Insurance', 'expense', 200.0),
-    Transaction('Auto Payment', 'expense', 288.0),
-    Transaction('Gas & Fuel', 'expense', 100.0),
-  ];
+  @override
+  void initState() {
+    super.initState();
+    _loadUserData();
+  }
   
-  // Recent transactions (bank history)
-  final List<Transaction> recentTransactions = [
-    Transaction('Starbucks', 'expense', 5.75),
-    Transaction('Grocery Store', 'expense', 43.21),
-    Transaction('Amazon', 'expense', 29.99),
-    Transaction('Paycheck', 'income', 1500.0),
-  ];
+  Future<void> _loadUserData() async {
+    currentUser = await _authService.getCurrentUser();
+    
+    if (currentUser != null) {
+      await _transactionService.initTransactionTable();
+      await _loadTransactions();
+    }
+  }
+  
+  Future<void> _loadTransactions() async {
+    if (currentUser == null) return;
+    
+    try {
+      final expensesList = await _transactionService.getTransactionsByType(currentUser!.id!, 'expense');
+      final recentList = await _transactionService.getRecentTransactions(currentUser!.id!);
+      final totalIncome = await _transactionService.getTotalByType(currentUser!.id!, 'income');
+      final totalExpenses = await _transactionService.getTotalByType(currentUser!.id!, 'expense');
+      
+      setState(() {
+        monthlyExpenses = expensesList;
+        recentTransactions = recentList;
+        income = totalIncome;
+        spent = totalExpenses;
+        budget = income - spent;
+      });
+    } catch (e) {
+      print('Error loading transactions: $e');
+    }
+  }
+  
+  Future<void> _addTransaction(String type) async {
+    if (currentUser == null) return;
+    
+    try {
+      if (type == 'expense') {
+        final description = expenseDescriptionController.text;
+        final amount = double.parse(expenseAmountController.text);
+        
+        if (description.isNotEmpty && amount > 0) {
+          final transaction = Transaction(
+            description: description,
+            type: 'expense',
+            amount: amount,
+            date: DateTime.now(),
+            userId: currentUser!.id!,
+          );
+          
+          await _transactionService.addTransaction(transaction);
+          expenseDescriptionController.clear();
+          expenseAmountController.clear();
+        }
+      } else if (type == 'income') {
+        final source = incomeSourceController.text;
+        final amount = double.parse(incomeAmountController.text);
+        
+        if (source.isNotEmpty && amount > 0) {
+          final transaction = Transaction(
+            description: source,
+            type: 'income',
+            amount: amount,
+            date: DateTime.now(),
+            userId: currentUser!.id!,
+          );
+          
+          await _transactionService.addTransaction(transaction);
+          incomeSourceController.clear();
+          incomeAmountController.clear();
+        }
+      }
+      
+      await _loadTransactions();
+    } catch (e) {
+      // Handle errors
+      print('Error adding transaction: $e');
+    }
+  }
 
   @override
   void dispose() {
@@ -48,16 +123,19 @@ class _HomePageState extends State<HomePage> {
 
   @override
   Widget build(BuildContext context) {
-    double remaining = budget - spent;
-    double progressValue = spent / budget;
+    double remaining = income - spent;
+    double progressValue = spent / income > 1 ? 1 : spent / income; // Cap at 1 to prevent overflow
     final isDarkMode = Theme.of(context).brightness == Brightness.dark;
     final Color cardColor = isDarkMode ? Colors.grey[800]! : Colors.purple.shade50;
     final Color textColor = isDarkMode ? Colors.white : Colors.black;
     final Color secondaryTextColor = isDarkMode ? Colors.grey[300]! : Colors.grey[700]!;
     
+    // Get the user's name or use "User" as fallback
+    String userName = currentUser?.name ?? "User";
+    
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Welcome User'),
+        title: Text('Welcome $userName'),
         centerTitle: true,
         backgroundColor: Colors.transparent,
         elevation: 0,
@@ -103,11 +181,15 @@ class _HomePageState extends State<HomePage> {
                         const SizedBox(height: 5),
                         Text('Left', style: TextStyle(color: secondaryTextColor)),
                         const SizedBox(height: 5),
-                        Text('\$${spent.toInt()} of \$${budget.toInt()} Spent', 
-                            style: TextStyle(
-                              fontWeight: FontWeight.w500,
-                              color: textColor,
-                            )),
+                        Text(
+                          "\$${income.toStringAsFixed(2)} of \$${spent.toStringAsFixed(2)} Spent",
+                          textAlign: TextAlign.center,
+                          style: TextStyle(
+                            fontWeight: FontWeight.w500,
+                            fontSize: 10, // Small font to fit the space
+                            color: textColor,
+                          ),
+                        ),
                       ],
                     ),
                   ],
@@ -145,6 +227,7 @@ class _HomePageState extends State<HomePage> {
                         mainAxisSize: MainAxisSize.min,
                         children: [
                           TextField(
+                            controller: incomeSourceController,
                             decoration: InputDecoration(
                               labelText: 'Source (e.g. Paycheck, Freelance)',
                               border: const OutlineInputBorder(),
@@ -170,7 +253,7 @@ class _HomePageState extends State<HomePage> {
                               const SizedBox(width: 10),
                               ElevatedButton(
                                 onPressed: () {
-                                  // Add income functionality will go here
+                                  _addTransaction('income');
                                 },
                                 style: ElevatedButton.styleFrom(
                                   backgroundColor: Colors.purple,
@@ -249,7 +332,7 @@ class _HomePageState extends State<HomePage> {
                               const SizedBox(width: 10),
                               ElevatedButton(
                                 onPressed: () {
-                                  // Add expense functionality will go here
+                                  _addTransaction('expense');
                                 },
                                 style: ElevatedButton.styleFrom(
                                   backgroundColor: Colors.purple,
@@ -345,19 +428,14 @@ class _HomePageState extends State<HomePage> {
                             color: secondaryTextColor.withOpacity(0.5),
                           ),
                           itemBuilder: (context, index) {
+                            final transaction = recentTransactions[index];
                             return ListTile(
-                              title: Text(
-                                recentTransactions[index].description,
-                                style: TextStyle(color: textColor),
-                              ),
+                              title: Text(transaction.description),
+                              subtitle: Text(DateFormat('MMM d, yyyy').format(transaction.date)),
                               trailing: Text(
-                                recentTransactions[index].type == 'income'
-                                    ? '\$${recentTransactions[index].amount.toInt()}'
-                                    : '-\$${recentTransactions[index].amount.toInt()}',
+                                "\$${transaction.amount.toStringAsFixed(2)}",
                                 style: TextStyle(
-                                  color: recentTransactions[index].type == 'income'
-                                      ? Colors.green
-                                      : textColor,
+                                  color: transaction.type == 'expense' ? Colors.red : Colors.green,
                                 ),
                               ),
                             );
@@ -374,13 +452,4 @@ class _HomePageState extends State<HomePage> {
       ),
     );
   }
-}
-
-// Model for transactions
-class Transaction {
-  final String description;
-  final String type; // 'income' or 'expense'
-  final double amount;
-
-  Transaction(this.description, this.type, this.amount);
 }

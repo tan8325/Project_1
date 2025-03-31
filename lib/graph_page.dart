@@ -1,6 +1,21 @@
 import 'package:flutter/material.dart';
 import 'package:fl_chart/fl_chart.dart';
 import 'package:intl/intl.dart';
+import 'package:project1/services/auth_service.dart';
+import 'package:project1/services/transaction_service.dart';
+import 'dart:math';
+
+class MonthlyData {
+  final DateTime date;
+  final double income;
+  final double expenses;
+
+  MonthlyData({
+    required this.date,
+    required this.income,
+    required this.expenses,
+  });
+}
 
 class GraphPage extends StatefulWidget {
   const GraphPage({super.key});
@@ -10,54 +25,86 @@ class GraphPage extends StatefulWidget {
 }
 
 class _GraphPageState extends State<GraphPage> {
-  // Generate the last 7 months of data starting from a specified date
-  final DateTime currentDate = DateTime(2025, 3, 30); // March 30, 2025
-  late final List<MonthlyData> monthlyData;
+  final AuthService _authService = AuthService();
+  final TransactionService _transactionService = TransactionService();
+  
+  User? currentUser;
+  List<MonthlyData> monthlyData = [];
+  bool isLoading = true;
   
   @override
   void initState() {
     super.initState();
-    monthlyData = _generateSampleData();
+    _loadUserDataAndTransactions();
   }
   
-  List<MonthlyData> _generateSampleData() {
-    final List<MonthlyData> data = [];
+  Future<void> _loadUserDataAndTransactions() async {
+    setState(() {
+      isLoading = true;
+    });
     
-    // Month names starting from September
-    final List<String> months = ['Sep', 'Oct', 'Nov', 'Dec', 'Jan', 'Feb', 'Mar'];
+    // Get the current user
+    currentUser = await _authService.getCurrentUser();
     
-    // Create sample data with December showing overspending (expenses > income)
-    for (int i = 0; i < 7; i++) {
-      double expenses, income;
+    if (currentUser != null) {
+      // Generate the last 7 months of data (6 previous + current)
+      final now = DateTime.now();
+      final List<MonthlyData> generatedData = [];
       
-      if (months[i] == 'Dec') {
-        // December shows overspending
-        expenses = 1500; // Higher expenses
-        income = 1200;   // Lower income
-      } else if (months[i] == 'Jan' || months[i] == 'Feb') {
-        // January and February have lower values
-        expenses = 400 + (i * 20);
-        income = 600 + (i * 30);
-      } else {
-        expenses = 700 + (i * 50) + (100 * (i % 3));
-        income = 1200 + (i * 70) - (50 * (i % 2));
-      }
+      // Random number generator for historical data
+      final random = Random();
       
-      // Create a dip in income during January
-      if (months[i] == 'Jan') {
-        income = 500;
-      }
+      // Get current month's actual data
+      final currentMonthIncome = await _transactionService.getMonthlyTotalByType(
+        currentUser!.id!, 
+        'income',
+        DateTime(now.year, now.month, 1),
+        DateTime(now.year, now.month + 1, 0),
+      );
       
-      data.add(MonthlyData(
-        months[i],
-        expenses,
-        income,
+      final currentMonthExpenses = await _transactionService.getMonthlyTotalByType(
+        currentUser!.id!,
+        'expense',
+        DateTime(now.year, now.month, 1),
+        DateTime(now.year, now.month + 1, 0),
+      );
+      
+      // Add current month's actual data
+      generatedData.add(MonthlyData(
+        date: DateTime(now.year, now.month, 1),
+        income: currentMonthIncome,
+        expenses: currentMonthExpenses,
       ));
+      
+      // Generate random data for previous 6 months
+      for (int i = 1; i <= 6; i++) {
+        final monthDate = DateTime(now.year, now.month - i, 1);
+        
+        // Generate random values
+        // For income, generate between 1500 and 4000
+        final randomIncome = 1500.0 + random.nextDouble() * 2500.0;
+        
+        // For expenses, generate between 40% and 90% of the income
+        final randomExpensePercentage = 0.4 + random.nextDouble() * 0.5;
+        final randomExpenses = randomIncome * randomExpensePercentage;
+        
+        generatedData.add(MonthlyData(
+          date: monthDate,
+          income: randomIncome,
+          expenses: randomExpenses,
+        ));
+      }
+      
+      // Sort by date (older to newer)
+      generatedData.sort((a, b) => a.date.compareTo(b.date));
+      
+      setState(() {
+        monthlyData = generatedData;
+        isLoading = false;
+      });
     }
-    
-    return data;
   }
-
+  
   @override
   Widget build(BuildContext context) {
     final isDarkMode = Theme.of(context).brightness == Brightness.dark;
@@ -69,181 +116,252 @@ class _GraphPageState extends State<GraphPage> {
     
     return Scaffold(
       body: SafeArea(
-        child: SingleChildScrollView(
-          padding: const EdgeInsets.all(16.0),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              // Area Chart Card
-              Card(
-                color: cardColor,
-                elevation: 2,
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-                child: Padding(
-                  padding: const EdgeInsets.all(16.0),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      SizedBox(
-                        height: 220,
-                        child: LineChart(_buildAreaChartData(
-                          expenseColor, 
-                          incomeColor,
-                          textColor,
-                          isDarkMode
-                        )),
-                      ),
-                      const SizedBox(height: 16),
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          _buildLegendItem(expenseColor, 'Expenses', textColor),
-                          const SizedBox(width: 24),
-                          _buildLegendItem(incomeColor, 'Income', textColor),
-                        ],
-                      ),
-                    ],
-                  ),
-                ),
-              ),
-              
-              const SizedBox(height: 24),
-              
-              // Reports section
-              Card(
-                color: cardColor,
-                elevation: 2,
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-                child: Padding(
-                  padding: const EdgeInsets.all(16.0),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        'Monthly Financial Summary',
-                        style: TextStyle(
-                          fontSize: 20,
-                          fontWeight: FontWeight.bold,
-                          color: textColor,
+        child: isLoading 
+          ? const Center(child: CircularProgressIndicator())
+          : RefreshIndicator(
+              onRefresh: _loadUserDataAndTransactions,
+              child: SingleChildScrollView(
+                padding: const EdgeInsets.all(16.0),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    // Area Chart Card
+                    Card(
+                      color: cardColor,
+                      elevation: 2,
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                      child: Padding(
+                        padding: const EdgeInsets.all(16.0),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              'Monthly Financial Overview',
+                              style: TextStyle(
+                                fontSize: 20,
+                                fontWeight: FontWeight.bold,
+                                color: textColor,
+                              ),
+                            ),
+                            const SizedBox(height: 16),
+                            SizedBox(
+                              height: 220,
+                              child: LineChart(_buildAreaChartData(
+                                expenseColor, 
+                                incomeColor,
+                                textColor,
+                                isDarkMode
+                              )),
+                            ),
+                            const SizedBox(height: 16),
+                            Row(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              children: [
+                                _buildLegendItem(expenseColor, 'Expenses', textColor),
+                                const SizedBox(width: 24),
+                                _buildLegendItem(incomeColor, 'Income', textColor),
+                              ],
+                            ),
+                          ],
                         ),
                       ),
-                      const SizedBox(height: 16),
-                      
-                      // Income bar chart
-                      Text('Income', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w500, color: textColor)),
-                      const SizedBox(height: 8),
-                      SizedBox(
-                        height: 200,
-                        child: BarChart(_buildBarChartData(
-                          true, 
-                          expenseColor, 
-                          textColor,
-                          isDarkMode,
-                          warningColor
-                        )),
-                      ),
-                      
-                      const SizedBox(height: 24),
-                      
-                      // Expenses bar chart
-                      Text('Expenses', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w500, color: textColor)),
-                      const SizedBox(height: 8),
-                      SizedBox(
-                        height: 200,
-                        child: BarChart(_buildBarChartData(
-                          false, 
-                          expenseColor, 
-                          textColor,
-                          isDarkMode,
-                          warningColor
-                        )),
-                      ),
-                      
-                      const SizedBox(height: 16),
-                      
-                      // Warning legend
-                      Row(
-                        children: [
-                          Container(
-                            width: 12,
-                            height: 12,
-                            decoration: BoxDecoration(
-                              color: warningColor,
-                              shape: BoxShape.circle,
+                    ),
+                    
+                    const SizedBox(height: 24),
+                    
+                    // Monthly Financial Summary
+                    Card(
+                      color: cardColor,
+                      elevation: 2,
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                      child: Padding(
+                        padding: const EdgeInsets.all(16.0),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              'Monthly Financial Summary',
+                              style: TextStyle(
+                                fontSize: 20,
+                                fontWeight: FontWeight.bold,
+                                color: textColor,
+                              ),
                             ),
-                          ),
-                          const SizedBox(width: 4),
-                          Text(
-                            'Months with overspending',
-                            style: TextStyle(
-                              color: warningColor,
-                              fontSize: 14,
-                              fontWeight: FontWeight.w500,
+                            const SizedBox(height: 16),
+                            
+                            // Income bar chart
+                            Text('Income', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w500, color: textColor)),
+                            const SizedBox(height: 8),
+                            SizedBox(
+                              height: 200,
+                              child: BarChart(_buildBarChartData(
+                                true, 
+                                expenseColor, 
+                                textColor,
+                                isDarkMode,
+                                warningColor
+                              )),
                             ),
-                          ),
-                        ],
+                            
+                            const SizedBox(height: 24),
+                            
+                            // Expenses bar chart
+                            Text('Expenses', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w500, color: textColor)),
+                            const SizedBox(height: 8),
+                            SizedBox(
+                              height: 200,
+                              child: BarChart(_buildBarChartData(
+                                false, 
+                                incomeColor, 
+                                textColor,
+                                isDarkMode,
+                                warningColor
+                              )),
+                            ),
+                          ],
+                        ),
                       ),
-                    ],
-                  ),
+                    ),
+                  ],
                 ),
               ),
-            ],
-          ),
-        ),
+            ),
       ),
     );
   }
 
+  Widget _buildLegendItem(Color color, String label, Color textColor) {
+    return Row(
+      children: [
+        Container(
+          width: 16,
+          height: 16,
+          decoration: BoxDecoration(
+            color: color,
+            shape: BoxShape.circle,
+          ),
+        ),
+        const SizedBox(width: 8),
+        Text(
+          label,
+          style: TextStyle(
+            color: textColor,
+            fontWeight: FontWeight.w500,
+          ),
+        ),
+      ],
+    );
+  }
+
+  bool _isOverspendingMonth(MonthlyData data) {
+    return data.expenses > data.income;
+  }
+
   LineChartData _buildAreaChartData(
     Color expenseColor, 
-    Color incomeColor, 
+    Color incomeColor,
     Color textColor,
     bool isDarkMode,
   ) {
-    // Calculate max Y value based on actual data
-    double maxIncome = monthlyData.map((data) => data.income).reduce((a, b) => a > b ? a : b);
-    double maxExpense = monthlyData.map((data) => data.expenses).reduce((a, b) => a > b ? a : b);
-    double calculatedMaxY = maxIncome > maxExpense ? maxIncome : maxExpense;
-    // Add 20% padding
-    calculatedMaxY = calculatedMaxY * 1.2;
-    
     return LineChartData(
       gridData: FlGridData(
-        show: true, 
+        show: true,
         drawVerticalLine: true,
-        getDrawingHorizontalLine: (value) => FlLine(
-          color: Colors.grey.withOpacity(0.3),
-          strokeWidth: 1,
-          dashArray: [5, 5],
-        ),
-        getDrawingVerticalLine: (value) => FlLine(
-          color: Colors.grey.withOpacity(0.3),
-          strokeWidth: 1,
-          dashArray: [5, 5],
-        ),
+        horizontalInterval: 1000,
+        verticalInterval: 1,
+        getDrawingHorizontalLine: (value) {
+          return FlLine(
+            color: textColor.withOpacity(0.1),
+            strokeWidth: 1,
+          );
+        },
+        getDrawingVerticalLine: (value) {
+          return FlLine(
+            color: textColor.withOpacity(0.1),
+            strokeWidth: 1,
+          );
+        },
       ),
       titlesData: FlTitlesData(
+        show: true,
         bottomTitles: AxisTitles(
           sideTitles: SideTitles(
             showTitles: true,
             reservedSize: 30,
-            interval: 1,
-            getTitlesWidget: (value, _) => value.toInt() < monthlyData.length 
-              ? Text(monthlyData[value.toInt()].month, style: TextStyle(color: textColor, fontSize: 10))
-              : const Text(''),
+            getTitlesWidget: (value, meta) {
+              if (value.toInt() >= 0 && value.toInt() < monthlyData.length) {
+                return SideTitleWidget(
+                  axisSide: meta.axisSide,
+                  child: Text(
+                    DateFormat('MMM').format(monthlyData[value.toInt()].date),
+                    style: TextStyle(
+                      color: textColor,
+                      fontWeight: FontWeight.bold,
+                      fontSize: 12,
+                    ),
+                  ),
+                );
+              }
+              return const Text('');
+            },
           ),
         ),
-        leftTitles: AxisTitles(sideTitles: SideTitles(showTitles: false)),
-        topTitles: AxisTitles(sideTitles: SideTitles(showTitles: false)),
-        rightTitles: AxisTitles(sideTitles: SideTitles(showTitles: false)),
+        leftTitles: AxisTitles(
+          sideTitles: SideTitles(
+            showTitles: true,
+            reservedSize: 50,
+            getTitlesWidget: (value, meta) {
+              return SideTitleWidget(
+                axisSide: meta.axisSide,
+                child: Text(
+                  value >= 1000 ? '\$${(value/1000).toStringAsFixed(1)}k' : '\$${value.toInt()}',
+                  style: TextStyle(
+                    color: textColor,
+                    fontWeight: FontWeight.bold,
+                    fontSize: 12,
+                  ),
+                ),
+              );
+            },
+          ),
+        ),
+        rightTitles: const AxisTitles(
+          sideTitles: SideTitles(showTitles: false),
+        ),
+        topTitles: const AxisTitles(
+          sideTitles: SideTitles(showTitles: false),
+        ),
       ),
-      borderData: FlBorderData(show: false),
-      lineTouchData: LineTouchData(enabled: true),
+      borderData: FlBorderData(
+        show: true,
+        border: Border.all(color: textColor.withOpacity(0.2), width: 1),
+      ),
       minX: 0,
       maxX: monthlyData.length - 1.0,
       minY: 0,
-      maxY: calculatedMaxY,
-      clipData: FlClipData.all(), // Ensure data stays within bounds
+      maxY: _getMaxY() * 1.1, // Add 10% padding
+      lineTouchData: LineTouchData(
+        touchTooltipData: LineTouchTooltipData(
+          tooltipBgColor: isDarkMode ? Colors.white.withOpacity(0.8) : Colors.black.withOpacity(0.8),
+          tooltipRoundedRadius: 8,
+          getTooltipItems: (List<LineBarSpot> touchedBarSpots) {
+            return touchedBarSpots.map((barSpot) {
+              final index = barSpot.x.toInt();
+              final isIncome = barSpot.barIndex == 1; // Income is the second line (index 1)
+              
+              return LineTooltipItem(
+                isIncome 
+                  ? 'Income: \$${monthlyData[index].income.toStringAsFixed(2)}'
+                  : 'Expenses: \$${monthlyData[index].expenses.toStringAsFixed(2)}',
+                TextStyle(
+                  color: isIncome ? incomeColor : expenseColor,
+                  fontWeight: FontWeight.bold,
+                ),
+              );
+            }).toList();
+          },
+        ),
+      ),
       lineBarsData: [
         // Expenses Line
         LineChartBarData(
@@ -295,6 +413,11 @@ class _GraphPageState extends State<GraphPage> {
       calculatedMaxY = calculatedMaxY * 1.2;
     }
     
+    // Create more appropriate intervals for Y axis
+    // For expenses graph, use 500 or 1000 intervals depending on the max value
+    final interval = calculatedMaxY > 4000 ? 1000.0 : 
+                    calculatedMaxY > 2000 ? 500.0 : 250.0;
+    
     return BarChartData(
       barGroups: List.generate(
         monthlyData.length,
@@ -317,74 +440,105 @@ class _GraphPageState extends State<GraphPage> {
               backDrawRodData: BackgroundBarChartRodData(
                 show: true,
                 toY: calculatedMaxY,
-                color: Colors.grey.withOpacity(0.2),
+                color: textColor.withOpacity(0.1),
               ),
             ),
           ],
         ),
       ),
       titlesData: FlTitlesData(
+        show: true,
         bottomTitles: AxisTitles(
           sideTitles: SideTitles(
             showTitles: true,
             reservedSize: 30,
-            interval: 1,
-            getTitlesWidget: (value, _) {
-              if (value.toInt() < monthlyData.length) {
-                final month = monthlyData[value.toInt()].month;
-                // Highlight the month name for overspending months
-                final isOverspending = _isOverspendingMonth(monthlyData[value.toInt()]);
-                return Text(
-                  month, 
-                  style: TextStyle(
-                    color: isOverspending ? warningColor : textColor,
-                    fontSize: 12,
-                    fontWeight: isOverspending ? FontWeight.bold : FontWeight.normal,
-      ),
-    );
-  }
+            getTitlesWidget: (value, meta) {
+              if (value.toInt() >= 0 && value.toInt() < monthlyData.length) {
+                return SideTitleWidget(
+                  axisSide: meta.axisSide,
+                  child: Text(
+                    DateFormat('MMM').format(monthlyData[value.toInt()].date),
+                    style: TextStyle(
+                      color: textColor,
+                      fontWeight: FontWeight.bold,
+                      fontSize: 12,
+                    ),
+                  ),
+                );
+              }
               return const Text('');
             },
           ),
         ),
-        leftTitles: AxisTitles(sideTitles: SideTitles(showTitles: false)),
-        topTitles: AxisTitles(sideTitles: SideTitles(showTitles: false)),
-        rightTitles: AxisTitles(sideTitles: SideTitles(showTitles: false)),
-      ),
-      borderData: FlBorderData(show: false),
-      gridData: FlGridData(show: false),
-      maxY: calculatedMaxY,
-      alignment: BarChartAlignment.center,
-      groupsSpace: 16, // Add space between bar groups
-      barTouchData: BarTouchData(enabled: false), // Disable touch to prevent visual glitches
-    );
-  }
-
-  // Helper method to check if a month has expenses exceeding income
-  bool _isOverspendingMonth(MonthlyData data) {
-    return data.expenses > data.income;
-  }
-
-  Widget _buildLegendItem(Color color, String text, Color textColor) {
-    return Row(
-      children: [
-        Container(
-          width: 12,
-          height: 12,
-          decoration: BoxDecoration(color: color, shape: BoxShape.circle),
+        leftTitles: AxisTitles(
+          sideTitles: SideTitles(
+            showTitles: true,
+            reservedSize: 50,
+            interval: interval, // Set specific interval for y-axis labels
+            getTitlesWidget: (value, meta) {
+              // Only show specific values to avoid overcrowding
+              if (value % interval != 0 && value != 0) {
+                return const SizedBox.shrink();
+              }
+              
+              return SideTitleWidget(
+                axisSide: meta.axisSide,
+                child: Text(
+                  value >= 1000 ? '\$${(value/1000).toStringAsFixed(1)}k' : '\$${value.toInt()}',
+                  style: TextStyle(
+                    color: textColor,
+                    fontWeight: FontWeight.bold,
+                    fontSize: 10,
+                  ),
+                ),
+              );
+            },
+          ),
         ),
-        const SizedBox(width: 4),
-        Text(text, style: TextStyle(color: textColor, fontSize: 14)),
-      ],
+        rightTitles: const AxisTitles(
+          sideTitles: SideTitles(showTitles: false),
+        ),
+        topTitles: const AxisTitles(
+          sideTitles: SideTitles(showTitles: false),
+        ),
+      ),
+      gridData: FlGridData(
+        show: true,
+        drawHorizontalLine: true,
+        drawVerticalLine: false,
+        horizontalInterval: interval, // Match grid lines with our intervals
+        getDrawingHorizontalLine: (value) => FlLine(
+          color: textColor.withOpacity(0.1),
+          strokeWidth: 1,
+        ),
+      ),
+      borderData: FlBorderData(
+        show: true,
+        border: Border.all(color: textColor.withOpacity(0.2)),
+      ),
+      barTouchData: BarTouchData(
+        touchTooltipData: BarTouchTooltipData(
+          tooltipBgColor: isDarkMode ? Colors.white.withOpacity(0.8) : Colors.black.withOpacity(0.8),
+          tooltipRoundedRadius: 8,
+          getTooltipItem: (group, groupIndex, rod, rodIndex) {
+            return BarTooltipItem(
+              isIncome 
+                ? 'Income: \$${monthlyData[group.x].income.toStringAsFixed(2)}'
+                : 'Expenses: \$${monthlyData[group.x].expenses.toStringAsFixed(2)}',
+              TextStyle(
+                color: isIncome ? barColor : rod.color,
+                fontWeight: FontWeight.bold,
+              ),
+            );
+          },
+        ),
+      ),
     );
   }
-}
 
-// Model for monthly financial data
-class MonthlyData {
-  final String month;
-  final double expenses;
-  final double income;
-
-  MonthlyData(this.month, this.expenses, this.income);
+  double _getMaxY() {
+    double maxIncome = monthlyData.map((data) => data.income).reduce((a, b) => a > b ? a : b);
+    double maxExpenses = monthlyData.map((data) => data.expenses).reduce((a, b) => a > b ? a : b);
+    return maxIncome > maxExpenses ? maxIncome : maxExpenses;
+  }
 }

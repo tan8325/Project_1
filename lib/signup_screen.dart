@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:project1/services/auth_service.dart';
 import 'main.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+
 
 class SignupScreen extends StatefulWidget {
   const SignupScreen({super.key});
@@ -55,6 +57,8 @@ class _SignupScreenState extends State<SignupScreen> {
         );
         
         final userId = await _authService.createUser(newUser);
+        
+        // Make sure we're saving the new user ID properly
         await _authService.saveCurrentUser(userId);
         
         if (!mounted) return;

@@ -1,5 +1,7 @@
 import 'package:sqflite/sqflite.dart';
 import 'package:path/path.dart';
+import 'package:project1/services/transaction_service.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 class User {
   final int? id;
@@ -63,6 +65,18 @@ class AuthService {
             password TEXT
           )
         ''');
+        
+        await db.execute('''
+          CREATE TABLE transactions(
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            description TEXT,
+            type TEXT,
+            amount REAL,
+            date INTEGER,
+            user_id INTEGER,
+            FOREIGN KEY (user_id) REFERENCES users (id)
+          )
+        ''');
       },
     );
   }
@@ -74,14 +88,41 @@ class AuthService {
 
   Future<User?> getUser(String email, String password) async {
     if (email == demoEmail && password == demoPassword) {
-      return User(
-        id: 999,
-        name: demoName,
-        email: demoEmail,
-        password: demoPassword,
+      // Check if demo user exists in database
+      final db = await database;
+      List<Map<String, dynamic>> maps = await db.query(
+        'users',
+        where: 'email = ?',
+        whereArgs: [demoEmail],
       );
+      
+      User demoUser;
+      if (maps.isEmpty) {
+        // Create demo user if it doesn't exist
+        final demoUserId = await createUser(User(
+          name: demoName,
+          email: demoEmail,
+          password: demoPassword,
+        ));
+        
+        demoUser = User(
+          id: demoUserId,
+          name: demoName,
+          email: demoEmail,
+          password: demoPassword,
+        );
+        
+        // Add demo transactions ONLY for the demo user and ONLY when first created
+        final transactionService = TransactionService();
+        await transactionService.addDemoData(demoUser.id!);
+      } else {
+        demoUser = User.fromMap(maps.first);
+      }
+      
+      return demoUser;
     }
     
+    // Regular user login - no demo data added
     final db = await database;
     List<Map<String, dynamic>> maps = await db.query(
       'users',
@@ -104,37 +145,35 @@ class AuthService {
   }
 
   Future<void> saveCurrentUser(int userId) async {
-    final db = await database;
-    await db.execute(
-      'CREATE TABLE IF NOT EXISTS current_user(id INTEGER PRIMARY KEY, user_id INTEGER)'
-    );
-    
-    await db.delete('current_user');
-    await db.insert('current_user', {'id': 1, 'user_id': userId});
+    SharedPreferences prefs = await SharedPreferences.getInstance();
+    await prefs.setInt('current_user_id', userId);
   }
 
   Future<User?> getCurrentUser() async {
-    final db = await database;
-    
     try {
-      var currentUserMaps = await db.query('current_user');
-      if (currentUserMaps.isEmpty) return null;
+      SharedPreferences prefs = await SharedPreferences.getInstance();
+      final userId = prefs.getInt('current_user_id');
       
-      int userId = currentUserMaps.first['user_id'] as int;
-      var userMaps = await db.query(
+      if (userId == null) return null;
+      
+      final db = await database;
+      List<Map<String, dynamic>> maps = await db.query(
         'users',
         where: 'id = ?',
         whereArgs: [userId],
       );
       
-      return userMaps.isNotEmpty ? User.fromMap(userMaps.first) : null;
+      if (maps.isEmpty) return null;
+      
+      return User.fromMap(maps.first);
     } catch (e) {
+      print('Error getting current user: $e');
       return null;
     }
   }
 
   Future<void> logout() async {
-    final db = await database;
-    await db.delete('current_user');
+    SharedPreferences prefs = await SharedPreferences.getInstance();
+    await prefs.remove('current_user_id');
   }
-} 
+}
