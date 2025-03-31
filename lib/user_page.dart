@@ -47,6 +47,16 @@ class _UserPageState extends State<UserPage> {
     });
   }
 
+  // deletes goal
+  void _deleteSavingsGoal({int? index}) {
+    setState(() {
+      if (index != null) {
+        // To remove a goal in the list
+        _goals.removeAt(index);
+      }
+    });
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -64,10 +74,12 @@ class _UserPageState extends State<UserPage> {
                     // increases size of the progress indicator
                     scale: 4,
                     child: CircularProgressIndicator(
-                      value: 0.8, // placeholder value
-                      valueColor: AlwaysStoppedAnimation<Color>(
-                        Colors.deepPurpleAccent,
-                      ),
+                      value: // value changes based on values from first goal in list
+                          _goals.isNotEmpty
+                              ? (double.tryParse(_goals[0]['amtsaved']) ?? 0) /
+                                  (double.tryParse(_goals[0]['totalamt']) ?? 1)
+                              : 0,
+                      valueColor: AlwaysStoppedAnimation<Color>(Colors.purple),
                       backgroundColor: const Color.fromARGB(255, 214, 213, 213),
                       strokeWidth: 2,
                     ),
@@ -88,7 +100,9 @@ class _UserPageState extends State<UserPage> {
                         ),
                       ],
                     ),
-                    child: Text('\$1,600'), // Temporary value
+                    child: Text(
+                      _goals.isNotEmpty ? '\$${_goals[0]['amtsaved']}' : '\$0',
+                    ),
                   ),
                 ],
               ),
@@ -115,6 +129,7 @@ class _UserPageState extends State<UserPage> {
                             _amtsavedcontroller,
                             _totalamtcontroller,
                             () => _addSavingsGoal(index: index),
+                            () => _deleteSavingsGoal(index: index),
                           );
                         },
                       );
@@ -149,7 +164,7 @@ class _UserPageState extends State<UserPage> {
               ),
             ),
             // Opens bottom sheet when presssed by user
-            TextButton(
+            ElevatedButton(
               onPressed: () {
                 showModalBottomSheet(
                   context: context,
@@ -160,12 +175,18 @@ class _UserPageState extends State<UserPage> {
                       _amtsavedcontroller,
                       _totalamtcontroller,
                       _addSavingsGoal,
+                      _deleteSavingsGoal,
                     );
                   },
                 );
               },
+              style: ElevatedButton.styleFrom(
+                backgroundColor: Colors.purple,
+                foregroundColor: Colors.white,
+              ),
               child: Text('Add New Savings Goal'),
             ),
+            SizedBox(height: 15),
           ],
         ),
       ),
@@ -179,6 +200,7 @@ Widget buildFullScreenSheet(
   TextEditingController amtsavedController,
   TextEditingController totalamtController,
   Function addSavingsGoal,
+  Function deleteSavingsGoal,
 ) {
   return DraggableScrollableSheet(
     initialChildSize: 1, // sheet takes up available screen height
@@ -213,6 +235,7 @@ Widget buildFullScreenSheet(
             Padding(
               padding: EdgeInsets.all(15),
               child: TextField(
+                keyboardType: TextInputType.number,
                 controller: amtsavedController,
                 decoration: InputDecoration(
                   labelText: 'Amount saved',
@@ -234,15 +257,29 @@ Widget buildFullScreenSheet(
                 ),
               ),
             ),
-            Padding(
-              padding: EdgeInsets.all(20),
-              child: ElevatedButton(
-                onPressed: () {
-                  addSavingsGoal();
-                  Navigator.pop(context);
-                },
-                child: Text("Add New Savings Goal"),
-              ),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                ElevatedButton(
+                  onPressed: () {
+                    addSavingsGoal();
+                    Navigator.pop(context);
+                  },
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Colors.purple,
+                    foregroundColor: Colors.white,
+                  ),
+                  child: Text("Add New Savings Goal"),
+                ),
+                IconButton(
+                  onPressed: () {
+                    deleteSavingsGoal();
+                    Navigator.pop(context);
+                  },
+                  color: Colors.red,
+                  icon: Icon(Icons.cancel_outlined),
+                ),
+              ],
             ),
           ],
         ),
