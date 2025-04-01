@@ -34,8 +34,8 @@ class AuthService {
   }
 
   Future<Database> _initDatabase() async {
-    String path = join(await getDatabasesPath(), 'finance_app.db');
-    return await openDatabase(
+    final path = join(await getDatabasesPath(), 'finance_app.db');
+    return openDatabase(
       path,
       version: 1,
       onCreate: (db, version) async {
@@ -65,46 +65,35 @@ class AuthService {
 
   Future<int> createUser(User user) async {
     final db = await database;
-    return await db.insert('users', user.toMap());
+    return db.insert('users', user.toMap());
   }
 
   Future<User?> getUser(String email, String password) async {
     if (email == demoEmail && password == demoPassword) {
-      // Check if demo user exists in database
       final db = await database;
-      List<Map<String, dynamic>> maps = await db.query(
-        'users',
-        where: 'email = ?',
-        whereArgs: [demoEmail],
-      );
+      final maps = await db.query('users', where: 'email = ?', whereArgs: [demoEmail]);
       
-      User demoUser;
       if (maps.isEmpty) {
-        // Create demo user if it doesn't exist
         final demoUserId = await createUser(User(
           name: demoName,
           email: demoEmail,
           password: demoPassword,
         ));
         
-        demoUser = User(
+        final demoUser = User(
           id: demoUserId,
           name: demoName,
           email: demoEmail,
           password: demoPassword,
         );
         
-        // Add demo transactions ONLY for the demo user and ONLY when first created
-        final transactionService = TransactionService();
-        await transactionService.addDemoData(demoUser.id!);
-      } else {
-        demoUser = User.fromMap(maps.first);
-      }
+        await TransactionService().addDemoData(demoUser.id!);
+        return demoUser;
+      } 
       
-      return demoUser;
+      return User.fromMap(maps.first);
     }
     
-    // Regular user login - no demo data added
     final db = await database;
     final maps = await db.query('users', where: 'email = ? AND password = ?', whereArgs: [email, password]);
     return maps.isNotEmpty ? User.fromMap(maps.first) : null;
@@ -117,50 +106,43 @@ class AuthService {
   }
 
   Future<void> saveCurrentUser(int userId) async {
-    SharedPreferences prefs = await SharedPreferences.getInstance();
+    final prefs = await SharedPreferences.getInstance();
     await prefs.setInt('current_user_id', userId);
   }
 
   Future<User?> getCurrentUser() async {
     try {
-      SharedPreferences prefs = await SharedPreferences.getInstance();
+      final prefs = await SharedPreferences.getInstance();
       final userId = prefs.getInt('current_user_id');
       
       if (userId == null) return null;
       
       final db = await database;
-      List<Map<String, dynamic>> maps = await db.query(
-        'users',
-        where: 'id = ?',
-        whereArgs: [userId],
-      );
+      final maps = await db.query('users', where: 'id = ?', whereArgs: [userId]);
       
-      if (maps.isEmpty) return null;
-      
-      return User.fromMap(maps.first);
+      return maps.isNotEmpty ? User.fromMap(maps.first) : null;
     } catch (e) {
-      print('Error getting current user: $e');
       return null;
     }
   }
 
   Future<void> logout() async {
-    SharedPreferences prefs = await SharedPreferences.getInstance();
+    final prefs = await SharedPreferences.getInstance();
     await prefs.remove('current_user_id');
   }
 
   Future<int> updateUser(User user) async {
     final db = await database;
-    return await db.update('users', user.toMap(), where: 'id = ?', whereArgs: [user.id]);
+    return db.update('users', user.toMap(), where: 'id = ?', whereArgs: [user.id]);
   }
 
   Future<int> updateUserEmail(int userId, String newEmail) async {
     final db = await database;
-    return await db.update('users', {'email': newEmail}, where: 'id = ?', whereArgs: [userId]);
+    return db.update('users', {'email': newEmail}, where: 'id = ?', whereArgs: [userId]);
   }
 
   Future<int> updateUserPassword(int userId, String newPassword) async {
     final db = await database;
-    return await db.update('users', {'password': newPassword}, where: 'id = ?', whereArgs: [userId]);
+    return db.update('users', {'password': newPassword}, where: 'id = ?', whereArgs: [userId]);
   }
 }

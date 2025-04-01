@@ -37,7 +37,6 @@ class _HomePageState extends State<HomePage> {
   
   Future<void> _loadUserData() async {
     currentUser = await _authService.getCurrentUser();
-    
     if (currentUser != null) {
       await _transactionService.initTransactionTable();
       await _loadTransactions();
@@ -60,9 +59,7 @@ class _HomePageState extends State<HomePage> {
         spent = totalExpenses;
         budget = income - spent;
       });
-    } catch (e) {
-      print('Error loading transactions: $e');
-    }
+    } catch (e) {}
   }
   
   Future<void> _addTransaction(String type) async {
@@ -74,15 +71,13 @@ class _HomePageState extends State<HomePage> {
         final amount = double.parse(expenseAmountController.text);
         
         if (description.isNotEmpty && amount > 0) {
-          final transaction = Transaction(
+          await _transactionService.addTransaction(Transaction(
             description: description,
             type: 'expense',
             amount: amount,
             date: DateTime.now(),
             userId: currentUser!.id!,
-          );
-          
-          await _transactionService.addTransaction(transaction);
+          ));
           expenseDescriptionController.clear();
           expenseAmountController.clear();
         }
@@ -91,25 +86,20 @@ class _HomePageState extends State<HomePage> {
         final amount = double.parse(incomeAmountController.text);
         
         if (source.isNotEmpty && amount > 0) {
-          final transaction = Transaction(
+          await _transactionService.addTransaction(Transaction(
             description: source,
             type: 'income',
             amount: amount,
             date: DateTime.now(),
             userId: currentUser!.id!,
-          );
-          
-          await _transactionService.addTransaction(transaction);
+          ));
           incomeSourceController.clear();
           incomeAmountController.clear();
         }
       }
       
       await _loadTransactions();
-    } catch (e) {
-      // Handle errors
-      print('Error adding transaction: $e');
-    }
+    } catch (e) {}
   }
 
   @override
@@ -129,8 +119,6 @@ class _HomePageState extends State<HomePage> {
     final Color cardColor = isDarkMode ? Colors.grey[800]! : Colors.purple.shade50;
     final Color textColor = isDarkMode ? Colors.white : Colors.black;
     final Color secondaryTextColor = isDarkMode ? Colors.grey[300]! : Colors.grey[700]!;
-    
-    // Get the user's name or use "User" as fallback
     String userName = currentUser?.name ?? "User";
     
     return Scaffold(
@@ -145,7 +133,6 @@ class _HomePageState extends State<HomePage> {
           padding: const EdgeInsets.all(16.0),
           child: Column(
             children: [
-              // Budget progress indicator
               SizedBox(
                 height: 200,
                 child: Stack(
@@ -170,25 +157,16 @@ class _HomePageState extends State<HomePage> {
                             color: isDarkMode ? Colors.white : Colors.grey.shade200,
                             borderRadius: BorderRadius.circular(20),
                           ),
-                          child: Text(
-                            '\$${remaining.toInt()}',
-                            style: TextStyle(
-                              fontWeight: FontWeight.bold,
-                              color: Colors.black, // Always black for visibility on white container
-                            ),
+                          child: Text('\$${remaining.toInt()}',
+                            style: const TextStyle(fontWeight: FontWeight.bold, color: Colors.black),
                           ),
                         ),
                         const SizedBox(height: 5),
                         Text('Left', style: TextStyle(color: secondaryTextColor)),
                         const SizedBox(height: 5),
-                        Text(
-                          "Budget: \$${income.toInt()} Spent: \$${spent.toInt()}",
+                        Text("Budget: \$${income.toInt()} Spent: \$${spent.toInt()}",
                           textAlign: TextAlign.center,
-                          style: TextStyle(
-                            fontWeight: FontWeight.w500,
-                            fontSize: 9, // Smaller font size to fit better
-                            color: textColor,
-                          ),
+                          style: TextStyle(fontWeight: FontWeight.w500, fontSize: 9, color: textColor),
                         ),
                       ],
                     ),
@@ -196,22 +174,14 @@ class _HomePageState extends State<HomePage> {
                 ),
               ),
               
-              // Income section
               Card(
                 color: cardColor,
                 shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                 child: ExpansionTile(
-                  onExpansionChanged: (expanded) {
-                    setState(() {
-                      isIncomeExpanded = expanded;
-                    });
-                  },
-                  leading: CircleAvatar(
+                  onExpansionChanged: (expanded) => setState(() => isIncomeExpanded = expanded),
+                  leading: const CircleAvatar(
                     backgroundColor: Colors.white,
-                    child: const Icon(
-                      Icons.add,
-                      color: Colors.purple,
-                    ),
+                    child: Icon(Icons.add, color: Colors.purple),
                   ),
                   title: Row(
                     children: [
@@ -252,15 +222,11 @@ class _HomePageState extends State<HomePage> {
                               ),
                               const SizedBox(width: 10),
                               ElevatedButton(
-                                onPressed: () {
-                                  _addTransaction('income');
-                                },
+                                onPressed: () => _addTransaction('income'),
                                 style: ElevatedButton.styleFrom(
                                   backgroundColor: Colors.purple,
                                   foregroundColor: Colors.white,
-                                  shape: RoundedRectangleBorder(
-                                    borderRadius: BorderRadius.circular(25),
-                                  ),
+                                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(25)),
                                 ),
                                 child: const Text('Add'),
                               ),
@@ -275,22 +241,14 @@ class _HomePageState extends State<HomePage> {
               
               const SizedBox(height: 10),
               
-              // Expenses section
               Card(
                 color: cardColor,
                 shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                 child: ExpansionTile(
-                  onExpansionChanged: (expanded) {
-                    setState(() {
-                      isExpensesExpanded = expanded;
-                    });
-                  },
-                  leading: CircleAvatar(
+                  onExpansionChanged: (expanded) => setState(() => isExpensesExpanded = expanded),
+                  leading: const CircleAvatar(
                     backgroundColor: Colors.white,
-                    child: const Icon(
-                      Icons.remove,
-                      color: Colors.purple,
-                    ),
+                    child: Icon(Icons.remove, color: Colors.purple),
                   ),
                   title: Row(
                     children: [
@@ -331,15 +289,11 @@ class _HomePageState extends State<HomePage> {
                               ),
                               const SizedBox(width: 10),
                               ElevatedButton(
-                                onPressed: () {
-                                  _addTransaction('expense');
-                                },
+                                onPressed: () => _addTransaction('expense'),
                                 style: ElevatedButton.styleFrom(
                                   backgroundColor: Colors.purple,
                                   foregroundColor: Colors.white,
-                                  shape: RoundedRectangleBorder(
-                                    borderRadius: BorderRadius.circular(25),
-                                  ),
+                                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(25)),
                                 ),
                                 child: const Text('Add'),
                               ),
@@ -348,17 +302,13 @@ class _HomePageState extends State<HomePage> {
                           const SizedBox(height: 16),
                           Align(
                             alignment: Alignment.centerLeft,
-                            child: Text(
-                              'Monthly Expenses',
-                              style: TextStyle(
-                                fontWeight: FontWeight.bold,
-                                color: textColor,
-                              ),
+                            child: Text('Monthly Expenses',
+                              style: TextStyle(fontWeight: FontWeight.bold, color: textColor),
                             ),
                           ),
                           const SizedBox(height: 8),
                           SizedBox(
-                            height: 150, // Reduce height
+                            height: 150,
                             child: ListView.builder(
                               shrinkWrap: true,
                               itemCount: monthlyExpenses.length,
@@ -367,20 +317,11 @@ class _HomePageState extends State<HomePage> {
                                   mainAxisSize: MainAxisSize.min,
                                   children: [
                                     ListTile(
-                                      title: Text(
-                                        monthlyExpenses[index].description,
+                                      title: Text(monthlyExpenses[index].description,
                                         style: TextStyle(color: textColor),
                                       ),
-                                      trailing: Row(
-                                        mainAxisSize: MainAxisSize.min,
-                                        children: [
-                                          Text(
-                                            '-\$${monthlyExpenses[index].amount.toInt()}',
-                                            style: TextStyle(color: textColor),
-                                          ),
-                                          const SizedBox(width: 8),
-                                          Icon(Icons.edit, size: 18, color: Colors.purple.shade300),
-                                        ],
+                                      trailing: Text('-\$${monthlyExpenses[index].amount.toInt()}',
+                                        style: TextStyle(color: textColor),
                                       ),
                                     ),
                                     if (index < monthlyExpenses.length - 1)
@@ -399,9 +340,8 @@ class _HomePageState extends State<HomePage> {
               
               const SizedBox(height: 20),
               
-              // Recent transactions section
-              Container(
-                height: 300, // Fixed height for recent transactions
+              SizedBox(
+                height: 300,
                 child: Card(
                   color: isDarkMode ? Colors.black : null,
                   shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(4)),
@@ -410,13 +350,8 @@ class _HomePageState extends State<HomePage> {
                     children: [
                       Padding(
                         padding: const EdgeInsets.all(16.0),
-                        child: Text(
-                          'Recent Transactions',
-                          style: TextStyle(
-                            fontSize: 16,
-                            fontWeight: FontWeight.bold,
-                            color: textColor,
-                          ),
+                        child: Text('Recent Transactions',
+                          style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: textColor),
                         ),
                       ),
                       Divider(height: 1, color: secondaryTextColor.withOpacity(0.5)),
@@ -424,16 +359,14 @@ class _HomePageState extends State<HomePage> {
                         child: ListView.separated(
                           itemCount: recentTransactions.length,
                           separatorBuilder: (context, index) => Divider(
-                            height: 1, 
-                            color: secondaryTextColor.withOpacity(0.5),
+                            height: 1, color: secondaryTextColor.withOpacity(0.5),
                           ),
                           itemBuilder: (context, index) {
                             final transaction = recentTransactions[index];
                             return ListTile(
                               title: Text(transaction.description),
                               subtitle: Text(DateFormat('MMM d, yyyy').format(transaction.date)),
-                              trailing: Text(
-                                "\$${transaction.amount.toStringAsFixed(2)}",
+                              trailing: Text("\$${transaction.amount.toStringAsFixed(2)}",
                                 style: TextStyle(
                                   color: transaction.type == 'expense' ? Colors.red : Colors.green,
                                 ),

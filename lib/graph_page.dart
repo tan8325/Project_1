@@ -61,105 +61,66 @@ class _GraphPageState extends State<GraphPage> with WidgetsBindingObserver {
   }
 
   Future<void> _loadUserDataAndTransactions({bool forceRefresh = false}) async {
-    // Skip if we're already loading
     if (isLoading && !forceRefresh) return;
     
-    setState(() {
-      isLoading = true;
-    });
+    setState(() => isLoading = true);
     
-    // Get the current user
     currentUser = await _authService.getCurrentUser();
     
     if (currentUser != null) {
-      // Generate the last 7 months of data (6 previous + current)
       final now = DateTime.now();
       final List<MonthlyData> generatedData = [];
       
-      // For debugging, print the current date info
-      print('Current date: ${now.toString()}');
-      print('Current month: ${now.month}, Current year: ${now.year}');
-      
-      // Calculate start and end of current month
       final currentMonthStart = DateTime(now.year, now.month, 1);
       final currentMonthEnd = DateTime(now.year, now.month + 1, 0);
       
-      print('Current month range: ${currentMonthStart.toString()} to ${currentMonthEnd.toString()}');
-      
-      // Get current month's actual data
       final currentMonthIncome = await _transactionService.getMonthlyTotalByType(
-        currentUser!.id!, 
-        'income',
-        currentMonthStart,
-        currentMonthEnd,
+        currentUser!.id!, 'income', currentMonthStart, currentMonthEnd,
       );
       
       final currentMonthExpenses = await _transactionService.getMonthlyTotalByType(
-        currentUser!.id!,
-        'expense',
-        currentMonthStart,
-        currentMonthEnd,
+        currentUser!.id!, 'expense', currentMonthStart, currentMonthEnd,
       );
       
-      print('CURRENT MONTH DATA: Income=$currentMonthIncome, Expenses=$currentMonthExpenses');
-      
-      // Add current month's actual data
       generatedData.add(MonthlyData(
         date: currentMonthStart,
         income: currentMonthIncome,
         expenses: currentMonthExpenses,
       ));
       
-      // Generate data for previous 6 months
       for (int i = 1; i <= 6; i++) {
         final monthStart = DateTime(now.year, now.month - i, 1);
         final monthEnd = DateTime(now.year, now.month - i + 1, 0);
         
-        print('Processing month ${monthStart.month}/${monthStart.year}');
-        
-        // Try to get actual data for this month
         final monthIncome = await _transactionService.getMonthlyTotalByType(
-          currentUser!.id!,
-          'income',
-          monthStart,
-          monthEnd,
+          currentUser!.id!, 'income', monthStart, monthEnd,
         );
         
         final monthExpenses = await _transactionService.getMonthlyTotalByType(
-          currentUser!.id!,
-          'expense',
-          monthStart,
-          monthEnd,
+          currentUser!.id!, 'expense', monthStart, monthEnd,
         );
         
-        // Use actual data if it exists, otherwise generate random data
         if (monthIncome > 0 || monthExpenses > 0) {
-          print('Using actual data for month ${monthStart.month}');
           generatedData.add(MonthlyData(
             date: monthStart,
             income: monthIncome,
             expenses: monthExpenses,
           ));
         } else {
-          // Generate deterministic random data
           final seed = monthStart.month + (monthStart.year * 12) + currentUser!.id!;
           final random = Random(seed);
           
           final randomIncome = 1500.0 + random.nextDouble() * 2500.0;
           final randomExpensePercentage = 0.4 + random.nextDouble() * 0.5;
-          final randomExpenses = randomIncome * randomExpensePercentage;
-          
-          print('Using random data for month ${monthStart.month}: Income=$randomIncome, Expenses=$randomExpenses');
           
           generatedData.add(MonthlyData(
             date: monthStart,
             income: randomIncome,
-            expenses: randomExpenses,
+            expenses: randomIncome * randomExpensePercentage,
           ));
         }
       }
       
-      // Sort by date (older to newer)
       generatedData.sort((a, b) => a.date.compareTo(b.date));
       
       setState(() {
@@ -167,9 +128,7 @@ class _GraphPageState extends State<GraphPage> with WidgetsBindingObserver {
         isLoading = false;
       });
     } else {
-      setState(() {
-        isLoading = false;
-      });
+      setState(() => isLoading = false);
     }
   }
   
@@ -304,26 +263,15 @@ class _GraphPageState extends State<GraphPage> with WidgetsBindingObserver {
         Container(
           width: 16,
           height: 16,
-          decoration: BoxDecoration(
-            color: color,
-            shape: BoxShape.circle,
-          ),
+          decoration: BoxDecoration(color: color, shape: BoxShape.circle),
         ),
         const SizedBox(width: 8),
-        Text(
-          label,
-          style: TextStyle(
-            color: textColor,
-            fontWeight: FontWeight.w500,
-          ),
-        ),
+        Text(label, style: TextStyle(color: textColor, fontWeight: FontWeight.w500)),
       ],
     );
   }
 
-  bool _isOverspendingMonth(MonthlyData data) {
-    return data.expenses > data.income;
-  }
+  bool _isOverspendingMonth(MonthlyData data) => data.expenses > data.income;
 
   LineChartData _buildAreaChartData(
     Color expenseColor, 
@@ -337,18 +285,14 @@ class _GraphPageState extends State<GraphPage> with WidgetsBindingObserver {
         drawVerticalLine: true,
         horizontalInterval: 1000,
         verticalInterval: 1,
-        getDrawingHorizontalLine: (value) {
-          return FlLine(
-            color: textColor.withOpacity(0.1),
-            strokeWidth: 1,
-          );
-        },
-        getDrawingVerticalLine: (value) {
-          return FlLine(
-            color: textColor.withOpacity(0.1),
-            strokeWidth: 1,
-          );
-        },
+        getDrawingHorizontalLine: (value) => FlLine(
+          color: textColor.withOpacity(0.1),
+          strokeWidth: 1,
+        ),
+        getDrawingVerticalLine: (value) => FlLine(
+          color: textColor.withOpacity(0.1),
+          strokeWidth: 1,
+        ),
       ),
       titlesData: FlTitlesData(
         show: true,
@@ -362,11 +306,7 @@ class _GraphPageState extends State<GraphPage> with WidgetsBindingObserver {
                   axisSide: meta.axisSide,
                   child: Text(
                     DateFormat('MMM').format(monthlyData[value.toInt()].date),
-                    style: TextStyle(
-                      color: textColor,
-                      fontWeight: FontWeight.bold,
-                      fontSize: 12,
-                    ),
+                    style: TextStyle(color: textColor, fontWeight: FontWeight.bold, fontSize: 12),
                   ),
                 );
               }
@@ -378,27 +318,17 @@ class _GraphPageState extends State<GraphPage> with WidgetsBindingObserver {
           sideTitles: SideTitles(
             showTitles: true,
             reservedSize: 50,
-            getTitlesWidget: (value, meta) {
-              return SideTitleWidget(
-                axisSide: meta.axisSide,
-                child: Text(
-                  value >= 1000 ? '\$${(value/1000).toStringAsFixed(1)}k' : '\$${value.toInt()}',
-                  style: TextStyle(
-                    color: textColor,
-                    fontWeight: FontWeight.bold,
-                    fontSize: 12,
-                  ),
-                ),
-              );
-            },
+            getTitlesWidget: (value, meta) => SideTitleWidget(
+              axisSide: meta.axisSide,
+              child: Text(
+                value >= 1000 ? '\$${(value/1000).toStringAsFixed(1)}k' : '\$${value.toInt()}',
+                style: TextStyle(color: textColor, fontWeight: FontWeight.bold, fontSize: 12),
+              ),
+            ),
           ),
         ),
-        rightTitles: const AxisTitles(
-          sideTitles: SideTitles(showTitles: false),
-        ),
-        topTitles: const AxisTitles(
-          sideTitles: SideTitles(showTitles: false),
-        ),
+        rightTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
+        topTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
       ),
       borderData: FlBorderData(
         show: true,
@@ -407,7 +337,7 @@ class _GraphPageState extends State<GraphPage> with WidgetsBindingObserver {
       minX: 0,
       maxX: monthlyData.length - 1.0,
       minY: 0,
-      maxY: _getMaxY() * 1.1, // Add 10% padding
+      maxY: _getMaxY() * 1.1,
       lineTouchData: LineTouchData(
         touchTooltipData: LineTouchTooltipData(
           tooltipBgColor: isDarkMode ? Colors.white.withOpacity(0.8) : Colors.black.withOpacity(0.8),
@@ -415,7 +345,7 @@ class _GraphPageState extends State<GraphPage> with WidgetsBindingObserver {
           getTooltipItems: (List<LineBarSpot> touchedBarSpots) {
             return touchedBarSpots.map((barSpot) {
               final index = barSpot.x.toInt();
-              final isIncome = barSpot.barIndex == 1; // Income is the second line (index 1)
+              final isIncome = barSpot.barIndex == 1;
               
               return LineTooltipItem(
                 isIncome 
@@ -431,31 +361,21 @@ class _GraphPageState extends State<GraphPage> with WidgetsBindingObserver {
         ),
       ),
       lineBarsData: [
-        // Expenses Line
         LineChartBarData(
-          spots: List.generate(monthlyData.length, 
-            (i) => FlSpot(i.toDouble(), monthlyData[i].expenses)),
+          spots: List.generate(monthlyData.length, (i) => FlSpot(i.toDouble(), monthlyData[i].expenses)),
           isCurved: true,
           color: expenseColor,
           barWidth: 3,
           dotData: FlDotData(show: false),
-          belowBarData: BarAreaData(
-            show: true,
-            color: expenseColor.withOpacity(0.3),
-          ),
+          belowBarData: BarAreaData(show: true, color: expenseColor.withOpacity(0.3)),
         ),
-        // Income Line
         LineChartBarData(
-          spots: List.generate(monthlyData.length, 
-            (i) => FlSpot(i.toDouble(), monthlyData[i].income)),
+          spots: List.generate(monthlyData.length, (i) => FlSpot(i.toDouble(), monthlyData[i].income)),
           isCurved: true,
           color: incomeColor,
           barWidth: 3,
           dotData: FlDotData(show: false),
-          belowBarData: BarAreaData(
-            show: true,
-            color: incomeColor.withOpacity(0.3),
-          ),
+          belowBarData: BarAreaData(show: true, color: incomeColor.withOpacity(0.3)),
         ),
       ],
     );
@@ -610,3 +530,4 @@ class _GraphPageState extends State<GraphPage> with WidgetsBindingObserver {
     return maxIncome > maxExpenses ? maxIncome : maxExpenses;
   }
 }
+

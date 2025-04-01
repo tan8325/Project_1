@@ -19,27 +19,23 @@ class Transaction {
     required this.userId,
   });
 
-  Map<String, dynamic> toMap() {
-    return {
-      'id': id,
-      'description': description,
-      'type': type,
-      'amount': amount,
-      'date': date.millisecondsSinceEpoch,
-      'user_id': userId,
-    };
-  }
+  Map<String, dynamic> toMap() => {
+    'id': id,
+    'description': description,
+    'type': type,
+    'amount': amount,
+    'date': date.millisecondsSinceEpoch,
+    'user_id': userId,
+  };
 
-  factory Transaction.fromMap(Map<String, dynamic> map) {
-    return Transaction(
-      id: map['id'] as int,
-      description: map['description'] as String,
-      type: map['type'] as String,
-      amount: map['amount'] as double,
-      date: DateTime.fromMillisecondsSinceEpoch(map['date'] as int),
-      userId: map['user_id'] as int,
-    );
-  }
+  factory Transaction.fromMap(Map<String, dynamic> map) => Transaction(
+    id: map['id'] as int,
+    description: map['description'] as String,
+    type: map['type'] as String,
+    amount: map['amount'] as double,
+    date: DateTime.fromMillisecondsSinceEpoch(map['date'] as int),
+    userId: map['user_id'] as int,
+  );
 }
 
 class TransactionService {
@@ -64,27 +60,8 @@ class TransactionService {
 
   Future<int> addTransaction(Transaction transaction) async {
     final db = await database;
-    
-    // Make sure the date is stored as milliseconds
     final map = transaction.toMap();
-    
-    // Debug the transaction being added
-    print('ADDING TRANSACTION:');
-    print('Description: ${transaction.description}');
-    print('Type: ${transaction.type}');
-    print('Amount: ${transaction.amount}');
-    print('Date: ${transaction.date.toIso8601String()}');
-    print('Date (millis): ${transaction.date.millisecondsSinceEpoch}');
-    print('User ID: ${transaction.userId}');
-    
     final id = await db.insert('transactions', map);
-    
-    // Immediately debug the transaction after insertion
-    await inspectTransaction(id);
-    
-    // Also debug recent transactions
-    await debugRecentTransactions(transaction.userId);
-    
     return id;
   }
 
@@ -97,9 +74,7 @@ class TransactionService {
       orderBy: 'date DESC',
     );
 
-    return List.generate(maps.length, (i) {
-      return Transaction.fromMap(maps[i]);
-    });
+    return List.generate(maps.length, (i) => Transaction.fromMap(maps[i]));
   }
 
   Future<List<Transaction>> getRecentTransactions(int userId, {int limit = 10}) async {
@@ -112,9 +87,7 @@ class TransactionService {
       limit: limit,
     );
 
-    return List.generate(maps.length, (i) {
-      return Transaction.fromMap(maps[i]);
-    });
+    return List.generate(maps.length, (i) => Transaction.fromMap(maps[i]));
   }
 
   Future<List<Transaction>> getTransactionsByType(int userId, String type) async {
@@ -126,9 +99,7 @@ class TransactionService {
       orderBy: 'date DESC',
     );
 
-    return List.generate(maps.length, (i) {
-      return Transaction.fromMap(maps[i]);
-    });
+    return List.generate(maps.length, (i) => Transaction.fromMap(maps[i]));
   }
 
   Future<double> getTotalByType(int userId, String type) async {
@@ -143,29 +114,19 @@ class TransactionService {
 
   Future<void> deleteTransaction(int id) async {
     final db = await database;
-    await db.delete(
-      'transactions',
-      where: 'id = ?',
-      whereArgs: [id],
-    );
+    await db.delete('transactions', where: 'id = ?', whereArgs: [id]);
   }
 
   Future<void> addDemoData(int userId) async {
     final db = await database;
-    
-    // Check if demo data already exists for this user
     final count = Sqflite.firstIntValue(await db.rawQuery(
       'SELECT COUNT(*) FROM transactions WHERE user_id = ?', [userId]
     ));
     
-    if (count != null && count > 0) return; // Demo data already exists
+    if (count != null && count > 0) return;
     
-    // Current date for reference
     final now = DateTime.now();
-    
-    // List of demo transactions
     final demoTransactions = [
-      // Income transactions
       Transaction(
         description: 'Salary',
         type: 'income',
@@ -180,8 +141,6 @@ class TransactionService {
         date: DateTime(now.year, now.month, 15),
         userId: userId,
       ),
-      
-      // Expense transactions - total reduced to stay within 3000 budget
       Transaction(
         description: 'Rent',
         type: 'expense',
@@ -224,105 +183,53 @@ class TransactionService {
         date: DateTime(now.year, now.month, now.day),
         userId: userId,
       ),
-      // Total expenses: around 2218.49 (which is less than 3000 income)
     ];
     
-    // Insert all demo transactions
     for (var transaction in demoTransactions) {
       await db.insert('transactions', transaction.toMap());
     }
   }
 
-  // Add this new method to clear user data
   Future<void> clearUserTransactions(int userId) async {
     final db = await database;
-    await db.delete(
-      'transactions',
-      where: 'user_id = ?',
-      whereArgs: [userId],
-    );
+    await db.delete('transactions', where: 'user_id = ?', whereArgs: [userId]);
   }
 
-  // Let's completely rewrite this method to fix the date filtering issue
   Future<double> getMonthlyTotalByType(int userId, String type, DateTime startDate, DateTime endDate) async {
     final db = await database;
-    
-    // Print for debugging
-    print('DEBUG: Getting $type transactions between ${startDate.toIso8601String()} and ${endDate.toIso8601String()}');
-    
-    // First, let's fetch ALL transactions of this type for the user
     final allTransactions = await db.query(
       'transactions',
       where: 'user_id = ? AND type = ?',
       whereArgs: [userId, type],
     );
     
-    print('DEBUG: Found ${allTransactions.length} total $type transactions for user $userId');
-    
-    // Manually filter by date
     double total = 0.0;
     for (var txn in allTransactions) {
-      // Get the date from the transaction (stored as milliseconds since epoch)
       final txnDateMillis = txn['date'] as int;
       final txnDate = DateTime.fromMillisecondsSinceEpoch(txnDateMillis);
       
-      // Check if the transaction is within our date range
       if (txnDate.isAfter(startDate.subtract(const Duration(days: 1))) && 
           txnDate.isBefore(endDate.add(const Duration(days: 1)))) {
-        
-        final amount = txn['amount'] as double;
-        print('DEBUG: Adding transaction: ${txn['description']} - $amount on ${txnDate.toIso8601String()}');
-        total += amount;
+        total += txn['amount'] as double;
       }
     }
     
-    print('DEBUG: Total $type for period: $total');
     return total;
   }
 
-  // Also add this method to inspect a specific transaction for debugging
   Future<void> inspectTransaction(int transactionId) async {
     final db = await database;
-    final txn = await db.query(
-      'transactions',
-      where: 'id = ?',
-      whereArgs: [transactionId],
-    );
-    
-    if (txn.isNotEmpty) {
-      final tx = txn.first;
-      final dateMillis = tx['date'] as int;
-      final date = DateTime.fromMillisecondsSinceEpoch(dateMillis);
-      
-      print('TRANSACTION INSPECTION:');
-      print('ID: ${tx['id']}');
-      print('Description: ${tx['description']}');
-      print('Type: ${tx['type']}');
-      print('Amount: ${tx['amount']}');
-      print('Date (millis): $dateMillis');
-      print('Date (parsed): ${date.toIso8601String()}');
-      print('User ID: ${tx['user_id']}');
-    } else {
-      print('Transaction not found');
-    }
+    await db.query('transactions', where: 'id = ?', whereArgs: [transactionId]);
   }
   
-  // Add a utility method to debug recent transactions
   Future<void> debugRecentTransactions(int userId) async {
     final db = await database;
-    final txns = await db.query(
+    await db.query(
       'transactions',
       where: 'user_id = ?',
       whereArgs: [userId],
       orderBy: 'date DESC',
       limit: 10,
     );
-    
-    print('=== LAST 10 TRANSACTIONS FOR USER $userId ===');
-    for (var tx in txns) {
-      final dateMillis = tx['date'] as int;
-      final date = DateTime.fromMillisecondsSinceEpoch(dateMillis);
-      print('${tx['type']} - ${tx['description']} - ${tx['amount']} - ${date.toIso8601String()}');
-    }
   }
 }

@@ -17,7 +17,7 @@ class _LoginScreenState extends State<LoginScreen> {
   final _authService = AuthService();
   bool _isLoading = false;
   String _errorMessage = '';
-  bool isDarkMode = false; 
+  bool isDarkMode = false;
 
   @override
   void initState() {
@@ -27,9 +27,7 @@ class _LoginScreenState extends State<LoginScreen> {
 
   Future<void> _loadDarkModePreference() async {
     final prefs = await SharedPreferences.getInstance();
-    setState(() {
-      isDarkMode = prefs.getBool('isDarkMode') ?? false;
-    });
+    setState(() => isDarkMode = prefs.getBool('isDarkMode') ?? false);
   }
 
   @override
@@ -61,9 +59,8 @@ class _LoginScreenState extends State<LoginScreen> {
 
         if (user != null) {
           await _authService.saveCurrentUser(user.id!);
-
-          final prefs = await SharedPreferences.getInstance();
-          prefs.setBool('isDarkMode', isDarkMode);
+          await SharedPreferences.getInstance()
+            ..setBool('isDarkMode', isDarkMode);
 
           if (!mounted) return;
 
@@ -119,12 +116,8 @@ class _LoginScreenState extends State<LoginScreen> {
                   border: OutlineInputBorder(),
                 ),
                 keyboardType: TextInputType.emailAddress,
-                validator: (value) {
-                  if (value == null || value.isEmpty) {
-                    return 'Please enter your email';
-                  }
-                  return null;
-                },
+                validator: (value) => 
+                  (value == null || value.isEmpty) ? 'Please enter your email' : null,
               ),
               const SizedBox(height: 16),
               TextFormField(
@@ -134,12 +127,8 @@ class _LoginScreenState extends State<LoginScreen> {
                   border: OutlineInputBorder(),
                 ),
                 obscureText: true,
-                validator: (value) {
-                  if (value == null || value.isEmpty) {
-                    return 'Please enter your password';
-                  }
-                  return null;
-                },
+                validator: (value) =>
+                  (value == null || value.isEmpty) ? 'Please enter your password' : null,
               ),
               const SizedBox(height: 24),
               ElevatedButton(

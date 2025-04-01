@@ -10,7 +10,6 @@ import 'settings_page.dart';
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   
-  // Check if user is already logged in
   final authService = AuthService();
   final currentUser = await authService.getCurrentUser();
 

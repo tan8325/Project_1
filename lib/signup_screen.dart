@@ -29,9 +29,7 @@ class _SignupScreenState extends State<SignupScreen> {
 
   Future<void> _loadDarkModePreference() async {
     final prefs = await SharedPreferences.getInstance();
-    setState(() {
-      isDarkMode = prefs.getBool('isDarkMode') ?? false;
-    });
+    setState(() => isDarkMode = prefs.getBool('isDarkMode') ?? false);
   }
 
   @override
@@ -52,7 +50,7 @@ class _SignupScreenState extends State<SignupScreen> {
       
       try {
         final existingUser = await _authService.getUserByEmail(
-          _emailController.text.trim(),
+          _emailController.text.trim()
         );
         
         if (existingUser != null) {
@@ -70,11 +68,10 @@ class _SignupScreenState extends State<SignupScreen> {
         );
         
         final userId = await _authService.createUser(newUser);
-        
         await _authService.saveCurrentUser(userId);
         
-        final prefs = await SharedPreferences.getInstance();
-        prefs.setBool('isDarkMode', isDarkMode);
+        await SharedPreferences.getInstance()
+          ..setBool('isDarkMode', isDarkMode);
 
         if (!mounted) return;
         
@@ -123,12 +120,8 @@ class _SignupScreenState extends State<SignupScreen> {
                   labelText: 'Full Name',
                   border: OutlineInputBorder(),
                 ),
-                validator: (value) {
-                  if (value == null || value.isEmpty) {
-                    return 'Please enter your name';
-                  }
-                  return null;
-                },
+                validator: (value) => 
+                  (value == null || value.isEmpty) ? 'Please enter your name' : null,
               ),
               const SizedBox(height: 16),
               TextFormField(
@@ -139,12 +132,10 @@ class _SignupScreenState extends State<SignupScreen> {
                 ),
                 keyboardType: TextInputType.emailAddress,
                 validator: (value) {
-                  if (value == null || value.isEmpty) {
+                  if (value == null || value.isEmpty) 
                     return 'Please enter your email';
-                  }
-                  if (!value.contains('@') || !value.contains('.')) {
+                  if (!value.contains('@') || !value.contains('.'))
                     return 'Please enter a valid email';
-                  }
                   return null;
                 },
               ),
@@ -157,12 +148,10 @@ class _SignupScreenState extends State<SignupScreen> {
                 ),
                 obscureText: true,
                 validator: (value) {
-                  if (value == null || value.isEmpty) {
+                  if (value == null || value.isEmpty)
                     return 'Please enter a password';
-                  }
-                  if (value.length < 6) {
+                  if (value.length < 6)
                     return 'Password must be at least 6 characters';
-                  }
                   return null;
                 },
               ),
@@ -175,12 +164,10 @@ class _SignupScreenState extends State<SignupScreen> {
                 ),
                 obscureText: true,
                 validator: (value) {
-                  if (value == null || value.isEmpty) {
+                  if (value == null || value.isEmpty)
                     return 'Please confirm your password';
-                  }
-                  if (value != _passwordController.text) {
+                  if (value != _passwordController.text)
                     return 'Passwords do not match';
-                  }
                   return null;
                 },
               ),
