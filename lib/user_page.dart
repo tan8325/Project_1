@@ -22,8 +22,15 @@ class _UserPageState extends State<UserPage> {
     String amtsaved = _amtsavedcontroller.text;
     String totalamt = _totalamtcontroller.text;
     setState(() {
-      // To add goals to the list
-      _goals.add({'name': name, 'amtsaved': amtsaved, 'totalamt': totalamt});
+      if (index != null) {
+        _goals[index] = {
+          'name': name,
+          'amtsaved': amtsaved,
+          'totalamt': totalamt,
+        };
+      } else {
+        _goals.add({'name': name, 'amtsaved': amtsaved, 'totalamt': totalamt});
+      }
     });
 
     // clears the text fields
@@ -35,26 +42,17 @@ class _UserPageState extends State<UserPage> {
   // Adds amount to saved amount
   void _addAmount({int? index}) {
     String name = _namecontroller.text;
-    String amtsaved = _amtsavedcontroller.text;
     String totalamt = _totalamtcontroller.text;
     String addamt = _addamtcontroller.text;
+    if (index == null) return;
 
-    // Perform addition
-    int saved = int.parse(amtsaved);
-    int added = int.parse(addamt);
-    int sumamt = saved + added;
-    String result = sumamt.toString();
+    // Perform addition (unless add value is null)
+    double saved = double.parse(_goals[index]['amtsaved']);
+    double added = (addamt.isNotEmpty) ? double.parse(addamt) : 0.0;
+    double sumamt = saved + added;
+    String result = sumamt.toStringAsFixed(2);
     setState(() {
-      if (index != null) {
-        // To update goal
-        _goals[index] = ({
-          'name': name,
-          'amtsaved': result,
-          'totalamt': totalamt,
-        });
-      } else {
-        _goals.add({'name': name, 'amtsaved': result, 'totalamt': totalamt});
-      }
+      _goals[index] = {'name': name, 'amtsaved': result, 'totalamt': totalamt};
     });
     _addamtcontroller.clear();
   }
