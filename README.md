@@ -14,3 +14,7 @@ set savings goals, and visualize financial trends through basic reports.
 - flutter pub get
 3. Run a virtual android device
 - flutter run
+
+
+https://youtu.be/lA2r01N9chY
+https://www.canva.com/design/DAGjRlol5bg/70H3P3LZUHCZsGCqeuMKPA/edit
